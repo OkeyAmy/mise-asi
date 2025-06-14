@@ -1,5 +1,5 @@
 
-import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -14,7 +14,7 @@ For any other topic, provide a helpful response or admit if you can't help with 
 Do not mention you are an AI model.
 `;
 
-const MealSchema = {
+const MealSchema: ObjectSchema = {
   type: SchemaType.OBJECT,
   properties: {
     name: { type: SchemaType.STRING, description: "The name of the meal." },
@@ -93,7 +93,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
