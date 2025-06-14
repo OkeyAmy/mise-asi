@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -13,40 +12,41 @@ import { MealPlan, ShoppingListItem } from "@/data/schema";
 import { callGemini } from "@/lib/gemini";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
-import { Content, Part } from "@google/generative-ai";
+import { Content, GenerateContentResponse, Part } from "@google/generative-ai";
 
 interface Message {
   id: number;
   text: string;
   sender: "user" | "bot";
-  showShoppingListButton?: boolean;
 }
 
 interface ChatbotProps {
   plan: MealPlan;
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
+  isShoppingListOpen: boolean;
+  setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const initialMessages: Message[] = [
   { id: 1, text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.", sender: "bot" }
 ];
 
-export const Chatbot = ({ plan, setPlan }: ChatbotProps) => {
+export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen }: ChatbotProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
-  const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("gemini_api_key");
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-    } else {
-      setTimeout(() => setIsApiKeyDialogOpen(true), 500);
+    let storedApiKey = localStorage.getItem("gemini_api_key");
+    if (!storedApiKey) {
+      storedApiKey = "AIzaSyB6j2kGAu88UqOhVNN8KSbUjijlXMfdovY";
+      localStorage.setItem("gemini_api_key", storedApiKey);
+      toast.info("A default API key has been configured.");
     }
+    setApiKey(storedApiKey);
   }, []);
 
   const handleSaveApiKey = (key: string) => {
@@ -97,46 +97,50 @@ export const Chatbot = ({ plan, setPlan }: ChatbotProps) => {
             parts: [{ text: msg.text }],
         }));
 
-        const result = await callGemini(apiKey, history);
-        const response = result.response;
+        const response = await callGemini(apiKey, history);
         const functionCalls = response.functionCalls();
 
         if (functionCalls) {
             const call = functionCalls[0];
+            let functionResponsePart: Part | undefined;
+            
             if (call.name === 'updateMealPlan' && call.args.newPlan) {
                 const newPlan = call.args.newPlan as MealPlan;
                 setPlan(newPlan);
-                
-                const functionResponsePart: Part = {
+                functionResponsePart = {
                     functionResponse: {
                         name: 'updateMealPlan',
                         response: { success: true, message: "Meal plan updated successfully." }
                     }
                 };
+            } else if (call.name === 'showShoppingList') {
+                setIsShoppingListOpen(true);
+                functionResponsePart = {
+                    functionResponse: {
+                        name: 'showShoppingList',
+                        response: { success: true, message: "Shopping list shown to user." }
+                    }
+                };
+            }
 
-                const historyWithFunctionCall: Content[] = [
-                    ...history,
-                    { role: 'model', parts: [{ functionCall: call }] },
-                    { role: 'user', parts: [functionResponsePart] }
-                ];
-                
-                const finalResult = await callGemini(apiKey, historyWithFunctionCall);
-                const finalText = finalResult.response.text();
-                const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
-                setMessages(prev => [...prev, botMessage]);
-
+            if (functionResponsePart) {
+              const historyWithFunctionCall: Content[] = [
+                  ...history,
+                  { role: 'model', parts: [{ functionCall: call }] },
+                  { role: 'user', parts: [functionResponsePart] }
+              ];
+              
+              const finalResultResponse = await callGemini(apiKey, historyWithFunctionCall);
+              const finalText = finalResultResponse.text();
+              const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
+              setMessages(prev => [...prev, botMessage]);
             }
         } else {
             const botResponseText = response.text();
-            const shouldShowButton = userInput.toLowerCase().includes("shopping list");
-            if (shouldShowButton) {
-                setIsShoppingListOpen(true);
-            }
             const botMessage: Message = { 
                 id: Date.now() + 1, 
                 text: botResponseText, 
                 sender: "bot",
-                showShoppingListButton: shouldShowButton 
             };
             setMessages(prev => [...prev, botMessage]);
         }
@@ -184,11 +188,6 @@ export const Chatbot = ({ plan, setPlan }: ChatbotProps) => {
                             {message.sender === 'bot' && <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary text-primary-foreground"><Bot className="h-4 w-4"/></AvatarFallback></Avatar>}
                             <div className={cn("max-w-[75%] rounded-lg p-3 text-sm", message.sender === "user" ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none")}>
                             {message.text}
-                            {message.showShoppingListButton && (
-                                <DialogTrigger asChild>
-                                <Button size="sm" className="mt-2 w-full"><ShoppingCart className="mr-2 h-4 w-4"/> View Shopping List</Button>
-                                </DialogTrigger>
-                            )}
                             </div>
                             {message.sender === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User className="h-4 w-4"/></AvatarFallback></Avatar>}
                         </div>

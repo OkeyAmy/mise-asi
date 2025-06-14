@@ -5,11 +5,12 @@ import { MealPlan } from "@/components/MealPlan";
 import { initialMealPlan } from '@/data/mock';
 import { MealPlan as MealPlanType } from '@/data/schema';
 import { Button } from '@/components/ui/button';
-import { BotMessageSquare, Menu } from 'lucide-react';
+import { BotMessageSquare, Menu, ShoppingCart } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
+  const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
@@ -28,7 +29,11 @@ const Index = () => {
                     <span>NutriMate</span>
                 </div>
                 <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Meal Plan</a>
-                <a href="#" className="flex items-center gap-4 px-2.5 text-foreground">Goals</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsShoppingListOpen(true); }} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
+                  <ShoppingCart className="h-5 w-5" />
+                  Shopping List
+                </a>
+                <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Goals</a>
                 <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Pantry</a>
               </nav>
             </SheetContent>
@@ -42,6 +47,10 @@ const Index = () => {
             </div>
             <nav className="grid gap-4 text-sm font-medium">
                 <a href="#" className="flex items-center gap-3 rounded-lg bg-primary text-primary-foreground px-3 py-2 transition-all">Meal Plan</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsShoppingListOpen(true); }} className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
+                  <ShoppingCart className="h-4 w-4" />
+                  Shopping List
+                </a>
                 <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Goals</a>
                 <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Pantry</a>
                 <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Settings</a>
@@ -51,7 +60,12 @@ const Index = () => {
           <MealPlan plan={mealPlan} />
         </main>
       </div>
-      <Chatbot plan={mealPlan} setPlan={setMealPlan} />
+      <Chatbot 
+        plan={mealPlan} 
+        setPlan={setMealPlan} 
+        isShoppingListOpen={isShoppingListOpen}
+        setIsShoppingListOpen={setIsShoppingListOpen}
+      />
     </div>
   );
 };
