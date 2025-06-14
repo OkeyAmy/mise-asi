@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
@@ -158,8 +159,10 @@ export async function callGeminiWithStreaming(
     const streamingResult = await model.generateContentStream({
       contents,
       // @ts-ignore - this is a preview feature that might not be in the SDK types yet
-      thinkingConfig: {
-        includeThoughts: true,
+      generationConfig: {
+        thinkingConfig: {
+          includeThoughts: true,
+        },
       },
     });
 
