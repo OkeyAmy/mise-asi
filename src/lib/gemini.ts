@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
@@ -95,10 +96,10 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   }
 
   try {
-    console.log("Calling Gemini with model: gemini-1.5-flash-latest");
+    console.log("Calling Gemini with model: gemini-2.5-pro-preview-06-05");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
@@ -147,16 +148,22 @@ export async function callGeminiWithStreaming(
   }
 
   try {
-    console.log("Calling Gemini with streaming enabled");
+    console.log("Calling Gemini with thinking enabled");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
     
     const streamingResult = await model.generateContentStream({
       contents,
+      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
+      generationConfig: {
+        thinkingConfig: {
+          includeThoughts: true,
+        },
+      },
     });
 
     let functionCallEncountered = false;
