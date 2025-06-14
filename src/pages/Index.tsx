@@ -1,71 +1,30 @@
 
 import { useState } from 'react';
 import { Chatbot } from "@/components/Chatbot";
-import { MealPlan } from "@/components/MealPlan";
+import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { initialMealPlan } from '@/data/mock';
-import { MealPlan as MealPlanType } from '@/data/schema';
-import { Button } from '@/components/ui/button';
-import { BotMessageSquare, Menu, ShoppingCart } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
+  const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground relative">
-      <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 lg:hidden">
-         <Sheet>
-            <SheetTrigger asChild>
-              <Button size="icon" variant="outline" className="sm:hidden">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="sm:max-w-xs">
-              <nav className="grid gap-6 text-lg font-medium">
-                <div className="flex items-center gap-2 text-lg font-semibold text-primary">
-                    <BotMessageSquare className="h-6 w-6" />
-                    <span>NutriMate</span>
-                </div>
-                <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Meal Plan</a>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsShoppingListOpen(true); }} className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">
-                  <ShoppingCart className="h-5 w-5" />
-                  Shopping List
-                </a>
-                <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Goals</a>
-                <a href="#" className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground">Pantry</a>
-              </nav>
-            </SheetContent>
-          </Sheet>
-      </header>
-      <div className="flex">
-        <aside className="hidden lg:block w-64 border-r p-6">
-            <div className="flex items-center gap-2 text-lg font-semibold text-primary mb-8">
-                <BotMessageSquare className="h-6 w-6" />
-                <span>NutriMate</span>
-            </div>
-            <nav className="grid gap-4 text-sm font-medium">
-                <a href="#" className="flex items-center gap-3 rounded-lg bg-primary text-primary-foreground px-3 py-2 transition-all">Meal Plan</a>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsShoppingListOpen(true); }} className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">
-                  <ShoppingCart className="h-4 w-4" />
-                  Shopping List
-                </a>
-                <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Goals</a>
-                <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Pantry</a>
-                <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Settings</a>
-            </nav>
-        </aside>
-        <main className="flex-1">
-          <MealPlan plan={mealPlan} />
-        </main>
+    <div className="min-h-screen bg-background text-foreground flex">
+      <div className="flex-1 max-w-2xl">
+        <Chatbot 
+          plan={mealPlan} 
+          setPlan={setMealPlan} 
+          isShoppingListOpen={isShoppingListOpen}
+          setIsShoppingListOpen={setIsShoppingListOpen}
+          thoughtSteps={thoughtSteps}
+          setThoughtSteps={setThoughtSteps}
+        />
       </div>
-      <Chatbot 
-        plan={mealPlan} 
-        setPlan={setMealPlan} 
-        isShoppingListOpen={isShoppingListOpen}
-        setIsShoppingListOpen={setIsShoppingListOpen}
-      />
+      <div className="w-96 border-l p-4">
+        <ThoughtProcess steps={thoughtSteps} />
+      </div>
     </div>
   );
 };

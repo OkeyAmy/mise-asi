@@ -4,16 +4,16 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Bot, Send, ShoppingCart, User, X } from "lucide-react";
+import { Bot, Send, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "./ui/scroll-area";
 import { ShoppingList } from "./ShoppingList";
-import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
-import { MealPlan, ShoppingListItem } from "@/data/schema";
+import { Dialog, DialogContent } from "./ui/dialog";
+import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
 import { callGemini } from "@/lib/gemini";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
-import { Content, GenerateContentResponse, Part, FunctionCall } from "@google/generative-ai";
+import { Content, FunctionCall } from "@google/generative-ai";
 
 interface Message {
   id: number;
@@ -26,14 +26,15 @@ interface ChatbotProps {
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  thoughtSteps: ThoughtStep[];
+  setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
 }
 
 const initialMessages: Message[] = [
   { id: 1, text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.", sender: "bot" }
 ];
 
-export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen }: ChatbotProps) => {
-  const [isOpen, setIsOpen] = useState(true);
+export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen, thoughtSteps, setThoughtSteps }: ChatbotProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -74,6 +75,23 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     return Array.from(allIngredients.values());
   };
 
+  const addThoughtStep = (step: string, details?: string) => {
+    const newStep: ThoughtStep = {
+      id: Date.now().toString(),
+      step,
+      status: 'active',
+      details
+    };
+    setThoughtSteps(prev => [...prev, newStep]);
+    return newStep.id;
+  };
+
+  const updateThoughtStep = (id: string, status: 'pending' | 'active' | 'completed', details?: string) => {
+    setThoughtSteps(prev => prev.map(step => 
+      step.id === id ? { ...step, status, details } : step
+    ));
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isThinking) return;
@@ -92,11 +110,22 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setInputValue("");
     setIsThinking(true);
 
+    // Clear previous thought steps
+    setThoughtSteps([]);
+
     try {
+        const step1Id = addThoughtStep("Understanding user request", userInput);
+        updateThoughtStep(step1Id, 'completed');
+
+        const step2Id = addThoughtStep("Analyzing available tools", "Checking updateMealPlan and showShoppingList functions");
+        
         const history: Content[] = newMessages.map(msg => ({
             role: msg.sender === 'bot' ? 'model' : 'user',
             parts: [{ text: msg.text }],
         }));
+
+        updateThoughtStep(step2Id, 'completed');
+        const step3Id = addThoughtStep("Generating AI response", "Processing with Gemini AI");
 
         const response = await callGemini(apiKey, history);
         const functionCalls = response.candidates?.[0]?.content.parts
@@ -105,39 +134,39 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
 
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
-            let functionResponsePart: Part | undefined;
+            updateThoughtStep(step3Id, 'completed');
             
-            if (call.name === 'updateMealPlan' && call.args.newPlan) {
-                const newPlan = call.args.newPlan as MealPlan;
+            if (call.name === 'updateMealPlan') {
+                const step4Id = addThoughtStep("Updating meal plan", "Applying new 7-day meal plan");
+                const newPlan = call.args as MealPlan;
                 setPlan(newPlan);
-                functionResponsePart = {
-                    functionResponse: {
-                        name: 'updateMealPlan',
-                        response: { success: true, message: "Meal plan updated successfully." }
-                    }
-                };
+                updateThoughtStep(step4Id, 'completed');
             } else if (call.name === 'showShoppingList') {
+                const step4Id = addThoughtStep("Showing shopping list", "Opening shopping list dialog");
                 setIsShoppingListOpen(true);
-                functionResponsePart = {
-                    functionResponse: {
-                        name: 'showShoppingList',
-                        response: { success: true, message: "Shopping list shown to the user." }
-                    }
-                };
+                updateThoughtStep(step4Id, 'completed');
             }
 
-            if (functionResponsePart) {
-              const historyWithFunctionCall: Content[] = [
-                  ...history,
-                  { role: 'model', parts: [{ functionCall: call }] },
-                  { role: 'user', parts: [functionResponsePart] }
-              ];
-              
-              const finalResultResponse = await callGemini(apiKey, historyWithFunctionCall);
-              const finalText = finalResultResponse.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
-              const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
-              setMessages(prev => [...prev, botMessage]);
-            }
+            const step5Id = addThoughtStep("Generating final response", "Creating user-friendly message");
+            
+            const functionResponsePart = {
+                functionResponse: {
+                    name: call.name,
+                    response: { success: true, message: `${call.name} executed successfully.` }
+                }
+            };
+
+            const historyWithFunctionCall: Content[] = [
+                ...history,
+                { role: 'model', parts: [{ functionCall: call }] },
+                { role: 'user', parts: [functionResponsePart] }
+            ];
+            
+            const finalResultResponse = await callGemini(apiKey, historyWithFunctionCall);
+            const finalText = finalResultResponse.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
+            const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
+            setMessages(prev => [...prev, botMessage]);
+            updateThoughtStep(step5Id, 'completed');
         } else {
             const botResponseText = response.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
             const botMessage: Message = { 
@@ -146,42 +175,34 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                 sender: "bot",
             };
             setMessages(prev => [...prev, botMessage]);
+            updateThoughtStep(step3Id, 'completed');
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast.error(errorMessage);
-        // Remove the user message if the call fails
         setMessages(messages);
+        addThoughtStep("Error occurred", errorMessage);
     } finally {
         setIsThinking(false);
     }
   };
 
-  if (!isOpen) {
-    return (
-      <Button onClick={() => setIsOpen(true)} className="fixed bottom-4 right-4 h-16 w-16 rounded-full shadow-lg z-50">
-        <Bot className="h-8 w-8" />
-      </Button>
-    )
-  }
-
   return (
-    <div className="fixed bottom-4 right-4 w-full max-w-sm z-50 animate-bubble-in">
+    <div className="h-screen flex flex-col">
         <ApiKeyDialog 
             isOpen={isApiKeyDialogOpen}
             onClose={() => setIsApiKeyDialogOpen(false)}
             onSave={handleSaveApiKey}
         />
         <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
-            <Card className="flex flex-col h-[600px] shadow-2xl">
-              <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="flex flex-col h-full shadow-none border-0">
+              <CardHeader className="flex flex-row items-center justify-between border-b">
                 <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarFallback className="bg-primary text-primary-foreground"><Bot /></AvatarFallback>
                     </Avatar>
                     <CardTitle>NutriMate AI</CardTitle>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}><X className="h-4 w-4"/></Button>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col p-0">
                 <ScrollArea className="flex-1 p-6">
