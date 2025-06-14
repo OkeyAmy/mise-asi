@@ -3,14 +3,16 @@ import { useState } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { MealPlan } from "@/components/MealPlan";
 import { initialMealPlan } from '@/data/mock';
-import { MealPlan as MealPlanType } from '@/data/schema';
+import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 import { Button } from '@/components/ui/button';
 import { BotMessageSquare, Menu, ShoppingCart } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ThoughtProcess } from '@/components/ThoughtProcess';
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
+  const [thoughtProcess, setThoughtProcess] = useState<ThoughtStep[]>([]);
 
   return (
     <div className="min-h-screen bg-background text-foreground relative">
@@ -56,8 +58,15 @@ const Index = () => {
                 <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary">Settings</a>
             </nav>
         </aside>
-        <main className="flex-1">
-          <MealPlan plan={mealPlan} />
+        <main className="flex-1 p-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                  <MealPlan plan={mealPlan} />
+              </div>
+              <div className="lg:col-span-1">
+                  <ThoughtProcess steps={thoughtProcess} />
+              </div>
+          </div>
         </main>
       </div>
       <Chatbot 
@@ -65,6 +74,7 @@ const Index = () => {
         setPlan={setMealPlan} 
         isShoppingListOpen={isShoppingListOpen}
         setIsShoppingListOpen={setIsShoppingListOpen}
+        setThoughtProcess={setThoughtProcess}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 export interface Meal {
   name: string;
   calories: number;
@@ -30,4 +29,11 @@ export interface ShoppingListItem {
   item: string;
   quantity: number;
   unit: string;
+}
+
+export interface ThoughtStep {
+  id: string;
+  title: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  details?: string;
 }
