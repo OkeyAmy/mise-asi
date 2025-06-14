@@ -18,7 +18,6 @@ const Index = () => {
           setPlan={setMealPlan} 
           isShoppingListOpen={isShoppingListOpen}
           setIsShoppingListOpen={setIsShoppingListOpen}
-          thoughtSteps={thoughtSteps}
           setThoughtSteps={setThoughtSteps}
         />
       </div>
