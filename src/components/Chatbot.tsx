@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -12,7 +13,7 @@ import { MealPlan, ShoppingListItem } from "@/data/schema";
 import { callGemini } from "@/lib/gemini";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
-import { Content, GenerateContentResponse, Part } from "@google/generative-ai";
+import { Content, GenerateContentResponse, Part, FunctionCall } from "@google/generative-ai";
 
 interface Message {
   id: number;
@@ -98,9 +99,11 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
         }));
 
         const response = await callGemini(apiKey, history);
-        const functionCalls = response.functionCalls();
+        const functionCalls = response.candidates?.[0]?.content.parts
+            .map(p => p.functionCall)
+            .filter((fc): fc is FunctionCall => !!fc);
 
-        if (functionCalls) {
+        if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
             let functionResponsePart: Part | undefined;
             
@@ -118,7 +121,7 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                 functionResponsePart = {
                     functionResponse: {
                         name: 'showShoppingList',
-                        response: { success: true, message: "Shopping list shown to user." }
+                        response: { success: true, message: "Shopping list shown to the user." }
                     }
                 };
             }
@@ -131,12 +134,12 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
               ];
               
               const finalResultResponse = await callGemini(apiKey, historyWithFunctionCall);
-              const finalText = finalResultResponse.text();
+              const finalText = finalResultResponse.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
               const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
               setMessages(prev => [...prev, botMessage]);
             }
         } else {
-            const botResponseText = response.text();
+            const botResponseText = response.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
             const botMessage: Message = { 
                 id: Date.now() + 1, 
                 text: botResponseText, 
