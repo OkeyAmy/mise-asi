@@ -51,7 +51,7 @@ const Index = () => {
           <MealPlan plan={mealPlan} />
         </main>
       </div>
-      <Chatbot plan={mealPlan}/>
+      <Chatbot plan={mealPlan} setPlan={setMealPlan} />
     </div>
   );
 };

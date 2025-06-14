@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -9,9 +10,10 @@ import { ScrollArea } from "./ui/scroll-area";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
 import { MealPlan, ShoppingListItem } from "@/data/schema";
-import { getGeminiResponse } from "@/lib/gemini";
+import { callGemini } from "@/lib/gemini";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
+import { Content, Part } from "@google/generative-ai";
 
 interface Message {
   id: number;
@@ -22,13 +24,14 @@ interface Message {
 
 interface ChatbotProps {
   plan: MealPlan;
+  setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
 }
 
 const initialMessages: Message[] = [
   { id: 1, text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.", sender: "bot" }
 ];
 
-export const Chatbot = ({ plan }: ChatbotProps) => {
+export const Chatbot = ({ plan, setPlan }: ChatbotProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -82,25 +85,69 @@ export const Chatbot = ({ plan }: ChatbotProps) => {
 
     const userInput = inputValue.trim();
     const userMessage: Message = { id: Date.now(), text: userInput, sender: "user" };
-    setMessages(prev => [...prev, userMessage]);
+    
+    const newMessages: Message[] = [...messages, userMessage];
+    setMessages(newMessages);
     setInputValue("");
     setIsThinking(true);
 
-    const botResponseText = await getGeminiResponse(apiKey, userInput);
-    const shouldShowButton = userInput.toLowerCase().includes("shopping list");
+    try {
+        const history: Content[] = newMessages.map(msg => ({
+            role: msg.sender === 'bot' ? 'model' : 'user',
+            parts: [{ text: msg.text }],
+        }));
 
-    if (shouldShowButton) {
-        setIsShoppingListOpen(true);
+        const result = await callGemini(apiKey, history);
+        const response = result.response;
+        const functionCalls = response.functionCalls();
+
+        if (functionCalls) {
+            const call = functionCalls[0];
+            if (call.name === 'updateMealPlan' && call.args.newPlan) {
+                const newPlan = call.args.newPlan as MealPlan;
+                setPlan(newPlan);
+                
+                const functionResponsePart: Part = {
+                    functionResponse: {
+                        name: 'updateMealPlan',
+                        response: { success: true, message: "Meal plan updated successfully." }
+                    }
+                };
+
+                const historyWithFunctionCall: Content[] = [
+                    ...history,
+                    { role: 'model', parts: [{ functionCall: call }] },
+                    { role: 'user', parts: [functionResponsePart] }
+                ];
+                
+                const finalResult = await callGemini(apiKey, historyWithFunctionCall);
+                const finalText = finalResult.response.text();
+                const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
+                setMessages(prev => [...prev, botMessage]);
+
+            }
+        } else {
+            const botResponseText = response.text();
+            const shouldShowButton = userInput.toLowerCase().includes("shopping list");
+            if (shouldShowButton) {
+                setIsShoppingListOpen(true);
+            }
+            const botMessage: Message = { 
+                id: Date.now() + 1, 
+                text: botResponseText, 
+                sender: "bot",
+                showShoppingListButton: shouldShowButton 
+            };
+            setMessages(prev => [...prev, botMessage]);
+        }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast.error(errorMessage);
+        // Remove the user message if the call fails
+        setMessages(messages);
+    } finally {
+        setIsThinking(false);
     }
-
-    const botMessage: Message = { 
-        id: Date.now() + 1, 
-        text: botResponseText, 
-        sender: "bot",
-        showShoppingListButton: shouldShowButton 
-    };
-    setMessages(prev => [...prev, botMessage]);
-    setIsThinking(false);
   };
 
   if (!isOpen) {
