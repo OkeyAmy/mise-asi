@@ -105,29 +105,22 @@ export async function callGeminiWithThinking(
     
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-1.5-flash-latest",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
     
     const response = await model.generateContentStream({
       contents,
-      generationConfig: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
     });
 
     let functionCalls: any[] = [];
     let finalAnswer = "";
 
-    for await (const chunk of response) {
+    for await (const chunk of response.stream) {
       for (const candidate of chunk.candidates || []) {
         for (const part of candidate.content?.parts || []) {
-          if (part.thought && part.text) {
-            onThought(part.text);
-          } else if (part.text) {
+          if (part.text) {
             onAnswer(part.text);
             finalAnswer += part.text;
           } else if (part.functionCall) {
@@ -143,6 +136,9 @@ export async function callGeminiWithThinking(
     console.error("Detailed Gemini API error:", error);
     
     if (error instanceof Error) {
+      if (error.message.includes('response is not async iterable')) {
+        throw new Error("A streaming connection error occurred with the AI. Please try again.");
+      }
       // Check for specific API key errors
       if (error.message.includes('API key not valid') || 
           error.message.includes('API_KEY_INVALID') ||
@@ -168,7 +164,6 @@ export async function callGeminiWithThinking(
   }
 }
 
-// Keep the original function for backward compatibility
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
   if (!apiKey || apiKey.trim() === '') {
     throw new Error("API key is required to connect to Gemini");
