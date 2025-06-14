@@ -62,10 +62,10 @@ const updateMealPlanTool: FunctionDeclaration = {
               meals: {
                 type: SchemaType.OBJECT,
                 properties: {
-                  breakfast: { ...MealSchema },
-                  lunch: { ...MealSchema },
-                  dinner: { ...MealSchema },
-                  snacks: { ...MealSchema },
+                  breakfast: MealSchema,
+                  lunch: MealSchema,
+                  dinner: MealSchema,
+                  snacks: MealSchema,
                 },
                 required: ["breakfast", "lunch", "dinner", "snacks"]
               }
@@ -93,7 +93,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest",
+      model: "gemini-1.5-flash-latest",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
