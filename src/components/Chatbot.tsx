@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -114,40 +113,83 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setThoughtSteps([]);
 
     try {
-        const step1Id = addThoughtStep("Understanding user request", userInput);
+        // Step 1: Analyze user input
+        const step1Id = addThoughtStep(
+          "🔍 Analyzing user input", 
+          `User message: "${userInput}"\n\nI'm examining this message to understand what the user wants. Let me identify key elements:\n- Keywords related to meal planning\n- Any dietary preferences or restrictions mentioned\n- Whether they're asking for a new plan or shopping list\n- Context from our conversation history`
+        );
+        
+        // Simulate thinking time
+        await new Promise(resolve => setTimeout(resolve, 500));
         updateThoughtStep(step1Id, 'completed');
 
-        const step2Id = addThoughtStep("Analyzing available tools", "Checking updateMealPlan and showShoppingList functions");
+        // Step 2: Determine appropriate response strategy
+        const step2Id = addThoughtStep(
+          "🎯 Determining response strategy",
+          `Based on the user's message, I need to decide:\n\n1. Should I generate a new meal plan?\n2. Should I show the shopping list?\n3. Should I provide general nutrition advice?\n4. Do I need to ask for clarification?\n\nAnalyzing available functions:\n- updateMealPlan: For creating new 7-day meal plans\n- showShoppingList: For displaying shopping lists\n\nConsidering user's current meal plan and conversation context...`
+        );
         
+        await new Promise(resolve => setTimeout(resolve, 700));
+        updateThoughtStep(step2Id, 'completed');
+
+        // Step 3: Prepare conversation history
+        const step3Id = addThoughtStep(
+          "📚 Preparing conversation context",
+          `Converting our conversation history to the format needed for the AI:\n\n${newMessages.slice(-5).map(m => `${m.sender === 'user' ? 'User' : 'NutriMate'}: ${m.text.substring(0, 100)}${m.text.length > 100 ? '...' : ''}`).join('\n')}\n\nThis context helps me provide personalized and relevant responses.`
+        );
+
         const history: Content[] = newMessages.map(msg => ({
             role: msg.sender === 'bot' ? 'model' : 'user',
             parts: [{ text: msg.text }],
         }));
 
-        updateThoughtStep(step2Id, 'completed');
-        const step3Id = addThoughtStep("Generating AI response", "Processing with Gemini AI");
+        updateThoughtStep(step3Id, 'completed');
+
+        // Step 4: Generate AI response
+        const step4Id = addThoughtStep(
+          "🤖 Generating AI response",
+          `Calling Gemini AI model (gemini-2.5-flash-preview-05-20) with:\n- System instructions for NutriMate behavior\n- Available tools (updateMealPlan, showShoppingList)\n- Conversation history\n- User's current request\n\nWaiting for AI to process and determine the best response...`
+        );
 
         const response = await callGemini(apiKey, history);
+        updateThoughtStep(step4Id, 'completed');
+
+        // Step 5: Process AI response
+        const step5Id = addThoughtStep(
+          "⚙️ Processing AI response",
+          `AI response received! Now analyzing what the AI decided to do:\n\n- Checking for function calls (meal plan updates, shopping list requests)\n- Extracting the text response\n- Determining if any actions need to be taken\n\nResponse structure: ${JSON.stringify(response.candidates?.[0]?.content.parts.map(p => Object.keys(p)), null, 2)}`
+        );
+
         const functionCalls = response.candidates?.[0]?.content.parts
             .map(p => p.functionCall)
             .filter((fc): fc is FunctionCall => !!fc);
 
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
-            updateThoughtStep(step3Id, 'completed');
+            updateThoughtStep(step5Id, 'completed');
             
             if (call.name === 'updateMealPlan') {
-                const step4Id = addThoughtStep("Updating meal plan", "Applying new 7-day meal plan");
+                const step6Id = addThoughtStep(
+                  "🍽️ Updating meal plan",
+                  `The AI decided to create a new meal plan! Here's what's happening:\n\n1. Extracting the new 7-day meal plan from the AI response\n2. Validating the plan structure (days, meals, ingredients, etc.)\n3. Updating the application state with the new plan\n4. This will refresh the meal plan display\n\nNew plan includes meals for: ${(call.args as MealPlan)?.days?.map(d => d.day).join(', ') || 'processing...'}`
+                );
                 const newPlan = call.args as MealPlan;
                 setPlan(newPlan);
-                updateThoughtStep(step4Id, 'completed');
+                updateThoughtStep(step6Id, 'completed');
             } else if (call.name === 'showShoppingList') {
-                const step4Id = addThoughtStep("Showing shopping list", "Opening shopping list dialog");
+                const step6Id = addThoughtStep(
+                  "🛒 Showing shopping list",
+                  `The AI determined the user wants to see their shopping list!\n\n1. Opening the shopping list dialog\n2. The shopping list is automatically generated from the current meal plan\n3. It consolidates all ingredients across all meals for the week\n4. Duplicate ingredients are combined with total quantities\n\nThis helps users know exactly what to buy for their meal plan.`
+                );
                 setIsShoppingListOpen(true);
-                updateThoughtStep(step4Id, 'completed');
+                updateThoughtStep(step6Id, 'completed');
             }
 
-            const step5Id = addThoughtStep("Generating final response", "Creating user-friendly message");
+            // Step 7: Generate final user message
+            const step7Id = addThoughtStep(
+              "💬 Generating final response",
+              `Now I need to create a user-friendly message explaining what I've done:\n\n1. Sending function execution confirmation back to the AI\n2. Requesting a natural language response for the user\n3. This creates a conversational flow rather than just executing functions silently\n\nThe user will see both the action (updated plan/shopping list) and a friendly explanation.`
+            );
             
             const functionResponsePart = {
                 functionResponse: {
@@ -166,22 +208,37 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
             const finalText = finalResultResponse.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
             const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
             setMessages(prev => [...prev, botMessage]);
-            updateThoughtStep(step5Id, 'completed');
+            updateThoughtStep(step7Id, 'completed');
         } else {
-            const botResponseText = response.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
+            // Direct text response without function calls
+            const responseText = response.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
+            updateThoughtStep(step5Id, 'completed', `AI provided a direct text response without any function calls:\n\n"${responseText}"\n\nThis means the AI determined that no meal plan updates or shopping list requests were needed - just a conversational response.`);
+            
             const botMessage: Message = { 
                 id: Date.now() + 1, 
-                text: botResponseText, 
+                text: responseText, 
                 sender: "bot",
             };
             setMessages(prev => [...prev, botMessage]);
-            updateThoughtStep(step3Id, 'completed');
         }
+
+        // Final completion step
+        const finalStepId = addThoughtStep(
+          "✅ Response complete",
+          `Successfully processed the user's request!\n\nSummary of actions taken:\n- Analyzed user input\n- Determined appropriate response strategy\n- Generated AI response using Gemini model\n- ${functionCalls?.length ? `Executed ${functionCalls[0].name} function` : 'Provided conversational response'}\n- Updated the chat interface\n\nReady for the next user interaction!`
+        );
+        updateThoughtStep(finalStepId, 'completed');
+
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast.error(errorMessage);
         setMessages(messages);
-        addThoughtStep("Error occurred", errorMessage);
+        
+        const errorStepId = addThoughtStep(
+          "❌ Error occurred", 
+          `An error happened while processing your request:\n\nError: ${errorMessage}\n\nThis could be due to:\n- API key issues\n- Network connectivity problems\n- AI model availability\n- Invalid request format\n\nPlease check the error message and try again.`
+        );
+        updateThoughtStep(errorStepId, 'completed');
     } finally {
         setIsThinking(false);
     }
