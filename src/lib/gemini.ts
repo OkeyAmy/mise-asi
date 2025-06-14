@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
@@ -93,7 +92,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-pro-preview-06-05",
+      model: "gemini-2.5-flash-preview-05-20",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
