@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "./ui/scroll-area";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent, DialogTrigger } from "./ui/dialog";
-import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
+import { MealPlan, ShoppingListItem } from "@/data/schema";
 import { callGemini } from "@/lib/gemini";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
@@ -26,21 +26,13 @@ interface ChatbotProps {
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setThoughtProcess: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
 }
 
 const initialMessages: Message[] = [
   { id: 1, text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.", sender: "bot" }
 ];
 
-const initialThoughtSteps: ThoughtStep[] = [
-    { id: 'understanding', title: 'Understanding Request', status: 'pending' },
-    { id: 'tool_check', title: 'Checking for Tools', status: 'pending' },
-    { id: 'function_call', title: 'Executing Function', status: 'pending' },
-    { id: 'response_generation', title: 'Generating Response', status: 'pending' },
-];
-
-export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen, setThoughtProcess }: ChatbotProps) => {
+export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen }: ChatbotProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -56,7 +48,6 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
       toast.info("A default API key has been configured.");
     }
     setApiKey(storedApiKey);
-    setThoughtProcess([]);
   }, []);
 
   const handleSaveApiKey = (key: string) => {
@@ -101,35 +92,23 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setInputValue("");
     setIsThinking(true);
 
-    let currentThoughtSteps = initialThoughtSteps.map(step => ({...step, status: 'pending'}));
-    const updateThought = (id: string, status: 'in_progress' | 'completed', details?: string) => {
-        currentThoughtSteps = currentThoughtSteps.map(s => s.id === id ? { ...s, status, details: details ?? s.details } : s);
-        setThoughtProcess([...currentThoughtSteps]);
-    };
-
     try {
         const history: Content[] = newMessages.map(msg => ({
             role: msg.sender === 'bot' ? 'model' : 'user',
             parts: [{ text: msg.text }],
         }));
-        
-        updateThought('understanding', 'in_progress');
-        const response = await callGemini(apiKey, history);
-        updateThought('understanding', 'completed');
-        updateThought('tool_check', 'in_progress');
 
+        const response = await callGemini(apiKey, history);
         const functionCalls = response.candidates?.[0]?.content.parts
             .map(p => p.functionCall)
             .filter((fc): fc is FunctionCall => !!fc);
 
         if (functionCalls && functionCalls.length > 0) {
             const call = functionCalls[0];
-            updateThought('tool_check', 'completed', `Found tool: ${call.name}`);
-            updateThought('function_call', 'in_progress');
             let functionResponsePart: Part | undefined;
             
-            if (call.name === 'updateMealPlan' && (call.args as any).newPlan) {
-                const newPlan = (call.args as any).newPlan as MealPlan;
+            if (call.name === 'updateMealPlan' && call.args.newPlan) {
+                const newPlan = call.args.newPlan as MealPlan;
                 setPlan(newPlan);
                 functionResponsePart = {
                     functionResponse: {
@@ -137,7 +116,6 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                         response: { success: true, message: "Meal plan updated successfully." }
                     }
                 };
-                updateThought('function_call', 'completed', 'Updated meal plan in the UI.');
             } else if (call.name === 'showShoppingList') {
                 setIsShoppingListOpen(true);
                 functionResponsePart = {
@@ -146,9 +124,6 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                         response: { success: true, message: "Shopping list shown to the user." }
                     }
                 };
-                updateThought('function_call', 'completed', 'Opened the shopping list.');
-            } else {
-                 updateThought('function_call', 'completed', 'Function call with no action.');
             }
 
             if (functionResponsePart) {
@@ -158,19 +133,12 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                   { role: 'user', parts: [functionResponsePart] }
               ];
               
-              updateThought('response_generation', 'in_progress');
               const finalResultResponse = await callGemini(apiKey, historyWithFunctionCall);
               const finalText = finalResultResponse.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
               const botMessage: Message = { id: Date.now() + 1, text: finalText, sender: "bot" };
               setMessages(prev => [...prev, botMessage]);
-              updateThought('response_generation', 'completed');
             }
         } else {
-            updateThought('tool_check', 'completed', 'No tools needed.');
-            currentThoughtSteps = currentThoughtSteps.filter(s => s.id !== 'function_call');
-            setThoughtProcess([...currentThoughtSteps]);
-            
-            updateThought('response_generation', 'in_progress');
             const botResponseText = response.candidates?.[0]?.content.parts.map(p => p.text).join('') ?? '';
             const botMessage: Message = { 
                 id: Date.now() + 1, 
@@ -178,14 +146,12 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
                 sender: "bot",
             };
             setMessages(prev => [...prev, botMessage]);
-            updateThought('response_generation', 'completed');
         }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast.error(errorMessage);
         // Remove the user message if the call fails
         setMessages(messages);
-        setThoughtProcess([]);
     } finally {
         setIsThinking(false);
     }
