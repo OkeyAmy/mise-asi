@@ -1,5 +1,5 @@
 
-import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -89,51 +89,107 @@ const showShoppingListTool: FunctionDeclaration = {
 
 const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool] }];
 
+// This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
   if (!apiKey || apiKey.trim() === '') {
     throw new Error("API key is required to connect to Gemini");
   }
 
   try {
-    console.log("Calling Gemini with model: gemini-2.5-flash-preview-05-20");
-    console.log("API Key present:", !!apiKey);
-    console.log("Contents length:", contents.length);
-    
+    console.log("Calling Gemini with model: gemini-1.5-flash-latest");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-1.5-flash-latest",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
     
     const { response } = await model.generateContent({ contents });
-    console.log("Gemini response received successfully");
     return response;
   } catch (error) {
     console.error("Detailed Gemini API error:", error);
     
     if (error instanceof Error) {
-      // Check for specific API key errors
       if (error.message.includes('API key not valid') || 
           error.message.includes('API_KEY_INVALID') ||
           error.message.includes('invalid API key')) {
         throw new Error("The provided API key is not valid. Please check and try again.");
       }
-      
-      // Check for quota/billing errors
       if (error.message.includes('quota') || error.message.includes('billing')) {
         throw new Error("API quota exceeded or billing issue. Please check your Gemini API account.");
       }
-      
-      // Check for model availability
       if (error.message.includes('model') || error.message.includes('not found')) {
         throw new Error("The requested Gemini model is not available. Please try again later.");
       }
-      
-      // Generic error with more details
       throw new Error(`Gemini API Error: ${error.message}`);
     }
     
     throw new Error("An unexpected error occurred while connecting to Gemini AI. Please try again.");
+  }
+}
+
+// New streaming function with thinking
+interface StreamHandlers {
+  onThought: (thought: string) => void;
+  onFunctionCall: (call: FunctionCall) => void;
+  onText: (text: string) => void;
+  onComplete: () => Promise<void>;
+  onError: (error: Error) => void;
+}
+
+export async function callGeminiWithStreaming(
+  apiKey: string,
+  contents: Content[],
+  handlers: StreamHandlers
+) {
+  if (!apiKey || apiKey.trim() === '') {
+    handlers.onError(new Error("API key is required to connect to Gemini"));
+    return;
+  }
+
+  try {
+    console.log("Calling Gemini with thinking enabled");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+      systemInstruction: SYSTEM_PROMPT,
+      tools,
+    });
+    
+    const streamingResult = await model.generateContentStream({
+      contents,
+      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
+      thinkingConfig: {
+        includeThoughts: true,
+      },
+    });
+
+    let functionCallEncountered = false;
+
+    for await (const chunk of streamingResult.stream) {
+      if (chunk.candidates && chunk.candidates.length > 0) {
+        const parts = chunk.candidates[0].content.parts;
+        for (const part of parts) {
+          if ((part as any).thought && part.text) {
+            handlers.onThought(part.text);
+          } else if (part.functionCall) {
+            functionCallEncountered = true;
+            handlers.onFunctionCall(part.functionCall);
+          } else if (part.text && !functionCallEncountered) {
+            handlers.onText(part.text);
+          }
+        }
+      }
+    }
+
+    await handlers.onComplete();
+
+  } catch (error) {
+    console.error("Detailed Gemini API error:", error);
+    if (error instanceof Error) {
+        handlers.onError(new Error(`Gemini API Error: ${error.message}`));
+    } else {
+        handlers.onError(new Error("An unexpected error occurred while connecting to Gemini AI. Please try again."));
+    }
   }
 }
