@@ -1,5 +1,8 @@
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 import OpenAI from "openai";
+import { mealPlanningTools } from './functions/mealPlanningTools';
+import { executeMealPlanningFunction } from './functions/executeFunctions';
+import { FunctionCallResult } from './functions/types';
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -131,7 +134,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
 // New streaming function with thinking
 interface StreamHandlers {
   onThought: (thought: string) => void;
-  onFunctionCall: (call: FunctionCall) => void;
+  onFunctionCall: (call: FunctionCall | FunctionCallResult) => void;
   onText: (text: string) => void;
   onComplete: () => Promise<void>;
   onError: (error: Error) => void;
@@ -161,30 +164,61 @@ async function callGroqWithStreaming(
 
     // Convert Gemini format to OpenAI format for Groq
     const messages = contents.map((content) => ({
-      role: content.role === "model" ? "assistant" : content.role,
+      role: content.role === "model" ? ("assistant" as const) : (content.role as "user" | "system"),
       content: content.parts.map((part) => part.text).join(""),
     }));
 
     messages.unshift({
-      role: "system",
+      role: "system" as const,
       content: SYSTEM_PROMPT,
     });
 
-    const chatCompletion = await openai.chat.completions.create(
-      {
-        model: "deepseek-r1-distill-llama-70b",
-        messages,
-        temperature: 0.6,
-        max_tokens: 4096,
-        top_p: 0.95,
-        stream: true,
-      }
-    );
+    const chatCompletion = await openai.chat.completions.create({
+      model: "deepseek-r1-distill-llama-70b",
+      messages,
+      temperature: 0.6,
+      max_tokens: 4096,
+      top_p: 0.95,
+      stream: true,
+      tools: mealPlanningTools,
+    });
 
     let accumulatedText = "";
+    let functionCalls: FunctionCallResult[] = [];
 
     for await (const chunk of chatCompletion) {
-      const content = chunk.choices[0]?.delta?.content || "";
+      const choice = chunk.choices[0];
+      if (!choice) continue;
+
+      // Handle function calls
+      if (choice.delta.tool_calls) {
+        for (const toolCall of choice.delta.tool_calls) {
+          if (toolCall.function) {
+            const functionCall: FunctionCallResult = {
+              type: "function_call",
+              id: toolCall.id || `fc_${Date.now()}`,
+              call_id: `call_${Date.now()}`,
+              name: toolCall.function.name || "",
+              arguments: toolCall.function.arguments || "{}",
+            };
+            
+            functionCalls.push(functionCall);
+            handlers.onFunctionCall(functionCall);
+            handlers.onThought(`🔨 Executing function: ${functionCall.name}`);
+            
+            // Execute the function
+            try {
+              const result = await executeMealPlanningFunction(functionCall);
+              handlers.onThought(`✅ Function result: ${result}`);
+            } catch (error) {
+              handlers.onThought(`❌ Function error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+          }
+        }
+      }
+
+      // Handle regular text content
+      const content = choice.delta?.content || "";
       if (content) {
         accumulatedText += content;
         handlers.onText(content);
@@ -219,12 +253,6 @@ export async function callGeminiWithStreaming(
     
     const streamingResult = await model.generateContentStream({
       contents,
-      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
-      generationConfig: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
     });
 
     let functionCallEncountered = false;
