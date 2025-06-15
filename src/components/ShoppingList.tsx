@@ -1,8 +1,11 @@
+
+import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Download, Share2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ShoppingListProps {
   items: ShoppingListItem[];
@@ -11,7 +14,20 @@ interface ShoppingListProps {
 }
 
 export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) => {
-  // We'll keep the checked state in the UI only for instant feedback (not persistent)
+  const [checkedItems, setCheckedItems] = React.useState<Set<string>>(new Set());
+
+  const handleCheckedChange = (checked: boolean, item: ShoppingListItem) => {
+    if (checked) {
+      // Add to checked items set for instant UI feedback
+      setCheckedItems(prev => new Set(prev).add(item.item));
+      
+      // Remove after a short delay to allow user to see the change
+      setTimeout(() => {
+        onRemove(item.item);
+      }, 500);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -25,19 +41,23 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
           {(isLoading ? <div>Loading...</div> : null)}
           {items.map((item) => (
             <div
-              key={item.item}
+              key={`${item.item}-${item.unit}`}
               className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
             >
               <div className="flex items-center gap-4">
                 <Checkbox
-                  id={item.item}
+                  id={`${item.item}-${item.unit}`}
+                  checked={checkedItems.has(item.item)}
                   onCheckedChange={(checked) =>
-                    checked ? onRemove(item.item) : undefined
+                    handleCheckedChange(!!checked, item)
                   }
                 />
                 <label
-                  htmlFor={item.item}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  htmlFor={`${item.item}-${item.unit}`}
+                  className={cn(
+                    "text-sm font-medium leading-none transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                    checkedItems.has(item.item) && "line-through text-muted-foreground"
+                  )}
                 >
                   {item.item}
                 </label>
