@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -14,6 +13,7 @@ import { Session } from "@supabase/supabase-js";
 import { useChatData } from "@/hooks/useChatData";
 import { LeftoversDialog } from "./LeftoversDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { RotateCcw } from "lucide-react";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -72,6 +72,8 @@ export const Chatbot = ({
     },
     shoppingListItems: chatData.shoppingList.items,
     onUpdateInventory: async (items) => {
+      // Debug statement to help diagnose inventory update issues
+      console.log("[Chatbot] onUpdateInventory called with items:", items);
       for (const item of items) {
         await chatData.inventory.upsertItem({
           ...item,
@@ -79,6 +81,8 @@ export const Chatbot = ({
           notes: item.notes || 'Added by AI',
         });
       }
+      // Confirm in console after bulk update
+      console.log("[Chatbot] Finished updating inventory via chat.");
       toast.success("Your inventory has been updated.");
     },
     onGetInventory: async () => {
@@ -90,13 +94,9 @@ export const Chatbot = ({
     onUpdateUserPreferences: async (updates) => {
       await chatData.preferences.update(updates as Partial<UserPreferences>);
     },
-    // Leftovers props
     setIsLeftoversOpen,
     onGetLeftovers: async () => {
-      await chatData.leftovers.get(); // Refreshes the list
-      // After fetching, we need to return the fresh data.
-      // The `leftoverItems` state might not be updated yet.
-      // A direct fetch and return is more reliable here.
+      await chatData.leftovers.get();
       const { data } = await supabase.from('user_leftovers').select('*').order('date_created', { ascending: false });
       return data || [];
     },
@@ -109,17 +109,21 @@ export const Chatbot = ({
     onRemoveLeftover: async (id) => {
       await chatData.leftovers.remove(id);
     },
-    // Pass session and thought steps for persistence
     session: userSession,
     thoughtSteps,
   });
 
   return (
     <div className="h-screen flex flex-col relative">
-      {/* Reset button, moved and fixed to top left inside chat panel */}
-      <div className="absolute top-4 left-4 z-20">
-        <ResetConversationButton onReset={resetConversation} />
-      </div>
+      {/* Icon-only Reset button on the left edge in chat panel */}
+      <button
+        onClick={resetConversation}
+        title="Reset Chat"
+        className="absolute left-2 top-4 z-20 w-8 h-8 flex items-center justify-center bg-background border border-border rounded-full transition hover:bg-accent"
+        aria-label="Reset Chat"
+      >
+        <RotateCcw className="w-5 h-5" />
+      </button>
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
           <ChatHeader onResetConversation={resetConversation} />
