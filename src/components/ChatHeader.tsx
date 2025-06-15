@@ -9,7 +9,6 @@ export const ChatHeader = ({}: ChatHeaderProps) => {
           <span className="text-primary-foreground font-semibold text-sm">M</span>
         </div>
         <div>
-          <h2 className="font-semibold">Mise</h2>
           <p className="text-xs text-muted-foreground">Your AI nutrition assistant</p>
         </div>
       </div>
