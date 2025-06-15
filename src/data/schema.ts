@@ -1,3 +1,4 @@
+
 export interface Meal {
   name: string;
   calories: number;
@@ -68,4 +69,10 @@ export interface LeftoverItem {
   notes?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "bot";
 }

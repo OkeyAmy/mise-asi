@@ -2,8 +2,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import { ThoughtStep } from "@/data/schema";
-import { Message } from "./chat/types";
+import { ThoughtStep, Message } from "@/data/schema";
 
 export function useChatHistory(session: Session | null) {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,7 +15,6 @@ export function useChatHistory(session: Session | null) {
       const { error } = await supabase
         .from("chat_sessions")
         .upsert({
-          user_id: session.user.id,
           messages: messages,
           thought_steps: thoughtSteps,
         });

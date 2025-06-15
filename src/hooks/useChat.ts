@@ -2,23 +2,24 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, Part } from "@google/generative-ai";
-import { ThoughtStep } from "@/data/schema";
-import { Message, UseChatProps, initialMessages } from "./chat/types";
+import { ThoughtStep, Message } from "@/data/schema";
+import { UseChatProps } from "./chat/types";
 import { handleFunctionCall } from "./chat/functionHandlers";
 import { useChatHistory } from "./useChatHistory";
+import { callGeminiProxy } from "./chat/geminiProxy";
 
-// Import from the correct location
-const callGeminiProxy = async (history: Content[]) => {
-  // Placeholder - this should use the actual gemini proxy implementation
-  throw new Error("Gemini proxy not implemented");
-};
+const initialMessages: Message[] = [
+  {
+    id: "1",
+    text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
+    sender: "bot",
+  },
+];
 
 export const useChat = (props: UseChatProps) => {
   const {
     setThoughtSteps,
     session,
-    apiKey,
-    onApiKeyMissing,
     ...functionHandlerArgs
   } = props;
   
@@ -105,11 +106,6 @@ export const useChat = (props: UseChatProps) => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isThinking) return;
-
-    if (!apiKey) {
-      onApiKeyMissing();
-      return;
-    }
 
     setThoughtSteps(prev => 
       prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))

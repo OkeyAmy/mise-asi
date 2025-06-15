@@ -1,20 +1,12 @@
 
-import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem, Message } from "@/data/schema";
 import { InventoryItem } from "@/hooks/useInventory";
 import { Session } from "@supabase/supabase-js";
 
-export interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "bot";
-}
-
 export interface UseChatProps {
-  apiKey: string | null;
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
-  onApiKeyMissing: () => void;
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
   onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[]) => Promise<void>;
   onGetInventory?: () => Promise<InventoryItem[]>;

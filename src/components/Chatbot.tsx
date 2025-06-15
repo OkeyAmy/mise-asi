@@ -3,16 +3,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, Message } from "@/data/schema";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
-import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useChatData } from "@/hooks/useChatData";
 import { LeftoversDialog } from "./LeftoversDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -40,17 +40,10 @@ export const Chatbot = ({
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
   );
-  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) setUserSession(session);
   }, [session]);
-
-  useEffect(() => {
-    // Get API key from environment or localStorage
-    const key = import.meta.env.VITE_GOOGLE_AI_API_KEY || localStorage.getItem('google_ai_api_key');
-    setApiKey(key);
-  }, []);
 
   const chatData = useChatData(userSession, plan.plan_id);
 
@@ -62,13 +55,9 @@ export const Chatbot = ({
     handleSendMessage,
     resetConversation,
   } = useChat({
-    apiKey,
     setPlan,
     setIsShoppingListOpen,
     setThoughtSteps,
-    onApiKeyMissing: () => {
-      toast.error("API key is missing. Please set your Google AI API key.");
-    },
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
       chatData.shoppingList.saveList(newList);
     },
