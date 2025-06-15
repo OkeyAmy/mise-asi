@@ -23,6 +23,7 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
   getLeftovers: handleLeftoverFunctions,
   addLeftover: handleLeftoverFunctions,
   updateLeftover: handleLeftoverFunctions,
+  adjustLeftoverServings: handleLeftoverFunctions,
   removeLeftover: handleLeftoverFunctions,
   getUserPreferences: handlePreferenceFunctions,
   updateUserPreferences: handlePreferenceFunctions,

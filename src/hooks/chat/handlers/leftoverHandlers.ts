@@ -51,6 +51,40 @@ export const handleLeftoverFunctions = async (
       funcResultMsg = "I had trouble adding the leftover.";
     }
     addThoughtStep("✅ Executed: addLeftover");
+  } else if (functionCall.name === "adjustLeftoverServings") {
+    try {
+      const { meal_name, serving_adjustment } = functionCall.args as { meal_name: string; serving_adjustment: number };
+      
+      if (!onGetLeftovers || !onUpdateLeftover || !onRemoveLeftover) {
+        funcResultMsg = "Leftovers function is not available right now.";
+      } else {
+        // Get current leftovers to find the item
+        const leftovers = await onGetLeftovers();
+        const itemToAdjust = leftovers.find(item => item.meal_name.toLowerCase() === meal_name.toLowerCase());
+        
+        if (itemToAdjust) {
+          const newServings = itemToAdjust.servings + serving_adjustment;
+          
+          if (newServings <= 0) {
+            // Remove the item if servings go to 0 or below
+            await onRemoveLeftover(itemToAdjust.id);
+            funcResultMsg = `I've removed '${meal_name}' from your leftovers since you've finished it.`;
+          } else {
+            // Update the serving count
+            await onUpdateLeftover(itemToAdjust.id, { servings: newServings });
+            const action = serving_adjustment > 0 ? "added" : "removed";
+            const amount = Math.abs(serving_adjustment);
+            funcResultMsg = `I've ${action} ${amount} serving${amount !== 1 ? 's' : ''} ${serving_adjustment > 0 ? 'to' : 'from'} your ${meal_name} leftovers. You now have ${newServings} serving${newServings !== 1 ? 's' : ''} left.`;
+          }
+        } else {
+          funcResultMsg = `I couldn't find a leftover item named '${meal_name}'.`;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      funcResultMsg = "I had trouble adjusting the leftover servings.";
+    }
+    addThoughtStep("✅ Executed: adjustLeftoverServings");
   } else if (functionCall.name === "updateLeftover") {
     try {
       const { leftover_id, servings, notes } = functionCall.args as { leftover_id: string; servings?: number; notes?: string };
@@ -83,7 +117,7 @@ export const handleLeftoverFunctions = async (
           
           if (itemToRemove) {
               await onRemoveLeftover(itemToRemove.id);
-              funcResultMsg = `I've removed '${meal_name}' from your leftovers.`;
+              funcResultMsg = `I've completely removed '${meal_name}' from your leftovers.`;
           } else {
               funcResultMsg = `I couldn't find a leftover item named '${meal_name}'.`;
           }
