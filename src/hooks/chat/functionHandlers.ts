@@ -14,6 +14,25 @@ type FunctionHandlerArgs = Omit<UseChatProps, 'apiKey' | 'onApiKeyMissing' | 'se
   addThoughtStep: AddThoughtStep;
 };
 
+// Helper function to remove sensitive fields from data before showing to user
+const sanitizeDataForDisplay = (data: any): any => {
+  if (Array.isArray(data)) {
+    return data.map(item => sanitizeDataForDisplay(item));
+  }
+  
+  if (data && typeof data === 'object') {
+    const sanitized = { ...data };
+    // Remove sensitive fields
+    delete sanitized.id;
+    delete sanitized.user_id;
+    delete sanitized.created_at;
+    delete sanitized.updated_at;
+    return sanitized;
+  }
+  
+  return data;
+};
+
 export const handleFunctionCall = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs
@@ -94,10 +113,11 @@ export const handleFunctionCall = async (
       if (onGetInventory) {
         const inventoryItems = await onGetInventory();
         
-        // Add detailed thought step with JSON formatted inventory data
+        // Add detailed thought step with JSON formatted inventory data (sanitized)
+        const sanitizedData = sanitizeDataForDisplay(inventoryItems);
         addThoughtStep(
           "🔨 Preparing to call function: getInventory",
-          JSON.stringify(inventoryItems, null, 2),
+          JSON.stringify(sanitizedData, null, 2),
           "completed"
         );
         
@@ -161,10 +181,11 @@ export const handleFunctionCall = async (
     try {
       const leftovers = await onGetLeftovers();
       
-      // Add detailed thought step with JSON formatted leftovers data
+      // Add detailed thought step with JSON formatted leftovers data (sanitized)
+      const sanitizedData = sanitizeDataForDisplay(leftovers);
       addThoughtStep(
         "🔨 Preparing to call function: getLeftovers",
-        JSON.stringify(leftovers, null, 2),
+        JSON.stringify(sanitizedData, null, 2),
         "completed"
       );
       
@@ -217,10 +238,11 @@ export const handleFunctionCall = async (
       if (onGetUserPreferences) {
         const prefs = await onGetUserPreferences();
         
-        // Add detailed thought step with JSON formatted preferences data
+        // Add detailed thought step with JSON formatted preferences data (sanitized)
+        const sanitizedData = sanitizeDataForDisplay(prefs);
         addThoughtStep(
           "🔨 Preparing to call function: getUserPreferences",
-          JSON.stringify(prefs, null, 2),
+          JSON.stringify(sanitizedData, null, 2),
           "completed"
         );
         
