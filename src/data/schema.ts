@@ -1,4 +1,3 @@
-
 export interface Meal {
   name: string;
   calories: number;
@@ -32,6 +31,7 @@ export interface ShoppingListItem {
   unit: string;
 }
 
+// Fix: id should be a string (Supabase UIDs, Date.now().toString(), etc)
 export interface Message {
   id: string;
   text: string;

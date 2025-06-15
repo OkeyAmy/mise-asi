@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Content } from '@google/generative-ai';
 import { MealPlan as MealPlanType, Message, ThoughtStep } from '@/data/schema';
 import { getSystemPrompt } from '@/lib/prompts/systemPrompt';
 import { callGeminiProxy } from './chat/geminiProxy';
 import { useChatHistory } from './useChatHistory';
-import { executeFunctions } from '@/lib/functions/executeFunctions';
+import executeFunctions from '@/lib/functions/executeFunctions';
 import { Session } from '@supabase/supabase-js';
 import { UseChatProps } from './chat/types';
 

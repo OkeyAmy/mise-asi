@@ -1,9 +1,11 @@
+
 import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem } from "@/data/schema";
 import { InventoryItem } from "@/hooks/useInventory";
 import { Session } from "@supabase/supabase-js";
 
+// Fix: Message.id should be string everywhere
 export interface Message {
-  id: number;
+  id: string;
   text: string;
   sender: "user" | "bot";
 }
@@ -33,7 +35,7 @@ export interface UseChatProps {
 
 export const initialMessages: Message[] = [
   {
-    id: 1,
+    id: "1",
     text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
     sender: "bot",
   },
