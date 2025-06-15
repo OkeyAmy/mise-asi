@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface Message {
   id: number;
@@ -23,7 +24,11 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
           <div key={message.id} className={cn("flex items-end gap-2", message.sender === "user" ? "justify-end" : "justify-start")}>
             {message.sender === 'bot' && <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary text-primary-foreground"><Bot className="h-4 w-4" /></AvatarFallback></Avatar>}
             <div className={cn("max-w-[75%] rounded-lg p-3 text-sm", message.sender === "user" ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none")}>
-              {message.text}
+              {message.sender === "bot" ? (
+                <MarkdownRenderer content={message.text} />
+              ) : (
+                message.text
+              )}
             </div>
             {message.sender === 'user' && <Avatar className="h-8 w-8"><AvatarFallback><User className="h-4 w-4" /></AvatarFallback></Avatar>}
           </div>
