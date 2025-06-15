@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
+import Groq from 'groq-sdk';
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -136,6 +137,65 @@ interface StreamHandlers {
   onError: (error: Error) => void;
 }
 
+// Groq fallback function
+async function callGroqWithStreaming(
+  contents: Content[],
+  handlers: StreamHandlers
+) {
+  try {
+    console.log("Falling back to Groq with model: deepseek-r1-distill-llama-70b");
+    
+    // Get Groq API key from environment or use a default
+    const groqApiKey = process.env.GROQ_API_KEY || localStorage.getItem("groq_api_key");
+    
+    if (!groqApiKey) {
+      throw new Error("Groq API key not found. Please set GROQ_API_KEY.");
+    }
+
+    const groq = new Groq({
+      apiKey: groqApiKey,
+      dangerouslyAllowBrowser: true
+    });
+
+    // Convert Gemini format to Groq format
+    const messages = contents.map(content => ({
+      role: content.role === 'model' ? 'assistant' : content.role,
+      content: content.parts.map(part => part.text).join('')
+    })) as any;
+
+    // Add system message
+    messages.unshift({
+      role: 'system',
+      content: SYSTEM_PROMPT
+    });
+
+    const completion = await groq.chat.completions.create({
+      model: "deepseek-r1-distill-llama-70b",
+      messages,
+      temperature: 0.6,
+      max_tokens: 4096,
+      top_p: 0.95,
+      stream: true,
+    });
+
+    let accumulatedText = "";
+
+    for await (const chunk of completion) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        accumulatedText += content;
+        handlers.onText(content);
+      }
+    }
+
+    await handlers.onComplete();
+
+  } catch (error) {
+    console.error("Groq API error:", error);
+    handlers.onError(error instanceof Error ? error : new Error("Groq API error"));
+  }
+}
+
 export async function callGeminiWithStreaming(
   apiKey: string,
   contents: Content[],
@@ -156,13 +216,7 @@ export async function callGeminiWithStreaming(
     });
     
     const streamingResult = await model.generateContentStream({
-      contents,
-      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
-      generationConfig: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
+      contents
     });
 
     let functionCallEncountered = false;
@@ -187,10 +241,22 @@ export async function callGeminiWithStreaming(
 
   } catch (error) {
     console.error("Detailed Gemini API error:", error);
-    if (error instanceof Error) {
-        handlers.onError(new Error(`Gemini API Error: ${error.message}`));
+    
+    // Check if this is a quota/billing error and fallback to Groq
+    if (error instanceof Error && 
+        (error.message.includes('429') || 
+         error.message.includes('quota') || 
+         error.message.includes('billing') ||
+         error.message.includes('free quota tier'))) {
+      console.log("Gemini quota exceeded, falling back to Groq...");
+      handlers.onThought("Gemini quota exceeded, switching to Groq fallback...");
+      await callGroqWithStreaming(contents, handlers);
     } else {
+      if (error instanceof Error) {
+        handlers.onError(new Error(`Gemini API Error: ${error.message}`));
+      } else {
         handlers.onError(new Error("An unexpected error occurred while connecting to Gemini AI. Please try again."));
+      }
     }
   }
 }
