@@ -30,7 +30,7 @@ export const ResetConversationButton = ({ onReset }: ResetConversationButtonProp
         <AlertDialogHeader>
           <AlertDialogTitle>Reset Conversation</AlertDialogTitle>
           <AlertDialogDescription>
-            This will clear your current chat history but keep all your meal plans, shopping lists, and inventory data intact. Are you sure you want to continue?
+            This will clear your current chat history but keep all your meal plans, shopping lists, leftovers, inventory, and preferences intact. Are you sure you want to continue?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
