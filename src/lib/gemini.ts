@@ -4,10 +4,14 @@ import { mealPlanningTools } from './functions/mealPlanningTools';
 import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
 import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTools";
+import { getUserTimezone } from "./time";
 
-const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
+const getSystemPrompt = () => `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
 Keep your responses concise, helpful, and encouraging.
+
+The user's current time is ${new Date().toISOString()} in the ${getUserTimezone()} timezone.
+Use this information to provide timely and relevant suggestions. For example, when generating a meal plan, start from today's date based on their timezone.
 
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
@@ -107,7 +111,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash-preview-05-20",
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: getSystemPrompt(),
       tools,
     });
     
@@ -174,7 +178,7 @@ async function callGroqWithStreaming(
 
     messages.unshift({
       role: "system" as const,
-      content: SYSTEM_PROMPT,
+      content: getSystemPrompt(),
     });
 
     const chatCompletion = await openai.chat.completions.create({
@@ -251,7 +255,7 @@ export async function callGeminiWithStreaming(
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash-preview-05-20",
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: getSystemPrompt(),
       tools,
     });
     
