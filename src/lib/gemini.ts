@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
-import Groq from 'groq-sdk';
+import OpenAI from "openai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -137,50 +137,53 @@ interface StreamHandlers {
   onError: (error: Error) => void;
 }
 
-// Groq fallback function
+// Groq fallback function using OpenAI SDK
 async function callGroqWithStreaming(
   contents: Content[],
   handlers: StreamHandlers
 ) {
   try {
-    console.log("Falling back to Groq with model: deepseek-r1-distill-llama-70b");
-    
-    // Get Groq API key from environment or use a default
-    const groqApiKey = process.env.GROQ_API_KEY || localStorage.getItem("groq_api_key");
-    
+    console.log("Falling back to Groq with OpenAI SDK, model: deepseek-r1-distill-llama-70b");
+
+    const groqApiKey =
+      process.env.GROQ_API_KEY ||
+      (typeof window !== "undefined" && localStorage.getItem("groq_api_key"));
+
     if (!groqApiKey) {
       throw new Error("Groq API key not found. Please set GROQ_API_KEY.");
     }
 
-    const groq = new Groq({
+    const openai = new OpenAI({
       apiKey: groqApiKey,
-      dangerouslyAllowBrowser: true
+      baseURL: "https://api.groq.com/openai/v1",
+      dangerouslyAllowBrowser: true,
     });
 
-    // Convert Gemini format to Groq format
-    const messages = contents.map(content => ({
-      role: content.role === 'model' ? 'assistant' : content.role,
-      content: content.parts.map(part => part.text).join('')
-    })) as any;
+    // Convert Gemini format to OpenAI format for Groq
+    const messages = contents.map((content) => ({
+      role: content.role === "model" ? "assistant" : content.role,
+      content: content.parts.map((part) => part.text).join(""),
+    }));
 
-    // Add system message
     messages.unshift({
-      role: 'system',
-      content: SYSTEM_PROMPT
+      role: "system",
+      content: SYSTEM_PROMPT,
     });
 
-    const completion = await groq.chat.completions.create({
-      model: "deepseek-r1-distill-llama-70b",
-      messages,
-      temperature: 0.6,
-      max_tokens: 4096,
-      top_p: 0.95,
-      stream: true,
-    });
+    const chatCompletion = await openai.chat.completions.create(
+      {
+        model: "deepseek-r1-distill-llama-70b",
+        messages,
+        temperature: 0.6,
+        max_tokens: 4096,
+        top_p: 0.95,
+        stream: true,
+      }
+    );
 
     let accumulatedText = "";
 
-    for await (const chunk of completion) {
+    for await (const chunk of chatCompletion) {
       const content = chunk.choices[0]?.delta?.content || "";
       if (content) {
         accumulatedText += content;
@@ -189,9 +192,8 @@ async function callGroqWithStreaming(
     }
 
     await handlers.onComplete();
-
   } catch (error) {
-    console.error("Groq API error:", error);
+    console.error("Groq API (OpenAI SDK) error:", error);
     handlers.onError(error instanceof Error ? error : new Error("Groq API error"));
   }
 }
