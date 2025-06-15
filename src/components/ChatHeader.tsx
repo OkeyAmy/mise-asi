@@ -1,11 +1,7 @@
 
-import { ResetConversationButton } from "./ResetConversationButton";
+interface ChatHeaderProps {}
 
-interface ChatHeaderProps {
-  onResetConversation: () => void;
-}
-
-export const ChatHeader = ({ onResetConversation }: ChatHeaderProps) => {
+export const ChatHeader = ({}: ChatHeaderProps) => {
   return (
     <div className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-3">
@@ -17,7 +13,6 @@ export const ChatHeader = ({ onResetConversation }: ChatHeaderProps) => {
           <p className="text-xs text-muted-foreground">Your AI nutrition assistant</p>
         </div>
       </div>
-      <ResetConversationButton onReset={onResetConversation} />
     </div>
   );
 };

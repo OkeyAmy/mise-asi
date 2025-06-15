@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -7,7 +8,7 @@ import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
@@ -16,6 +17,7 @@ const Index = () => {
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [resetConversation, setResetConversation] = useState<(() => void) | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +45,12 @@ const Index = () => {
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handleResetConversation = () => {
+    if (resetConversation) {
+      resetConversation();
+    }
+  };
   
   if (!session) {
     return null;
@@ -50,7 +58,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
+      <Header 
+        onShoppingListOpen={() => setIsShoppingListOpen(true)} 
+        onLeftoversOpen={() => setIsLeftoversOpen(true)}
+        onResetConversation={handleResetConversation}
+      />
       
       <div className="flex flex-1 pt-20 relative overflow-hidden">
         <div className="flex-1 w-full lg:max-w-2xl">
@@ -64,6 +76,7 @@ const Index = () => {
             setThoughtSteps={setThoughtSteps}
             session={session}
             thoughtSteps={thoughtSteps}
+            onResetConversationReady={setResetConversation}
           />
         </div>
         
