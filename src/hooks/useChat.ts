@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
@@ -55,7 +54,8 @@ export const useChat = ({ apiKey, setPlan, setIsShoppingListOpen, setThoughtStep
     setMessages(newMessages);
     setInputValue("");
     setIsThinking(true);
-    setThoughtSteps([]);
+    // Do NOT reset thought steps here: remove or comment out the line below!
+    // setThoughtSteps([]); 
 
     const history: Content[] = newMessages.map(msg => ({
         role: msg.sender === 'bot' ? 'model' : 'user',
