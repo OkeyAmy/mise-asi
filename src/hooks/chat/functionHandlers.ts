@@ -7,6 +7,7 @@ import { handleMealFunctions } from "./handlers/mealHandlers";
 import { handlePreferenceFunctions } from "./handlers/preferenceHandlers";
 import { handleShoppingListFunctions } from "./handlers/shoppingListHandlers";
 import { handleUtilityFunctions } from "./handlers/utilityHandlers";
+import { handleNotesFunctions } from "./handlers/notesHandlers";
 
 const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: FunctionHandlerArgs) => Promise<string> } = {
   suggestMeal: handleMealFunctions,
@@ -25,7 +26,7 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
   removeLeftover: handleLeftoverFunctions,
   getUserPreferences: handlePreferenceFunctions,
   updateUserPreferences: handlePreferenceFunctions,
-  updateUserNotes: handlePreferenceFunctions,
+  updateUserNotes: handleNotesFunctions,
 };
 
 export const handleFunctionCall = async (
