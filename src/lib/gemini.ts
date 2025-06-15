@@ -1,4 +1,3 @@
-
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
@@ -96,10 +95,10 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   }
 
   try {
-    console.log("Calling Gemini with model: gemini-2.5-pro-preview-06-05");
+    console.log("Calling Gemini with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-pro-preview-06-05",
+      model: "gemini-2.5-flash-preview-05-20",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
@@ -148,10 +147,10 @@ export async function callGeminiWithStreaming(
   }
 
   try {
-    console.log("Calling Gemini with thinking enabled");
+    console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-pro-preview-06-05",
+      model: "gemini-2.5-flash-preview-05-20",
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
