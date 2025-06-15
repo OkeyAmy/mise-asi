@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { LeftoverItem } from '@/data/schema';
-import { Session } from '@supabase/supabase-js';
+import { Session, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 export const useLeftovers = (session: Session | null) => {
@@ -35,21 +35,51 @@ export const useLeftovers = (session: Session | null) => {
     useEffect(() => {
         if (!session) return;
 
+        const handleDbChange = (payload: RealtimePostgresChangesPayload<LeftoverItem>) => {
+            if (payload.errors) {
+                console.error("Realtime error:", payload.errors);
+                toast.error("Error receiving live updates.");
+                return;
+            }
+
+            switch (payload.eventType) {
+                case 'INSERT':
+                    setItems(currentItems => [payload.new, ...currentItems]
+                        .sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime()));
+                    break;
+                case 'UPDATE':
+                    setItems(currentItems => currentItems.map(item => 
+                        item.id === payload.new.id ? payload.new : item
+                    ));
+                    break;
+                case 'DELETE':
+                    const oldId = (payload.old as { id: string }).id;
+                    setItems(currentItems => currentItems.filter(item => item.id !== oldId));
+                    break;
+                default:
+                    // This event type is not handled.
+                    break;
+            }
+        };
+
         const channel = supabase
             .channel('user-leftovers-changes')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'user_leftovers', filter: `user_id=eq.${session.user.id}` },
-                () => {
-                    fetchLeftovers();
-                }
+                handleDbChange
             )
-            .subscribe();
+            .subscribe((status, err) => {
+                if (err) {
+                    console.error("Subscription error", err);
+                    toast.error("Could not connect to live updates for leftovers.");
+                }
+            });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [session, fetchLeftovers]);
+    }, [session]);
 
     const addLeftover = async (newItem: Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'date_created'> & { date_created?: string }) => {
         if (!session) return;
