@@ -15,16 +15,15 @@ import {
 
 interface ResetConversationButtonProps {
   onReset: () => void;
-  iconOnly?: boolean;
 }
 
-export const ResetConversationButton = ({ onReset, iconOnly = false }: ResetConversationButtonProps) => {
+export const ResetConversationButton = ({ onReset }: ResetConversationButtonProps) => {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className={iconOnly ? "w-8 h-8 p-0 flex items-center justify-center" : "gap-2"}>
-          <RotateCcw className="h-5 w-5" />
-          {!iconOnly && "Reset Chat"}
+        <Button variant="outline" size="sm" className="gap-2">
+          <RotateCcw className="h-4 w-4" />
+          Reset Chat
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
