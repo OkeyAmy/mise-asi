@@ -4,17 +4,18 @@ import { mealPlanningTools } from './functions/mealPlanningTools';
 import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
 import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTools";
+import { getUserTimezone, getFormattedUserTime } from "./time";
 
 const getSystemPrompt = () => `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
 Keep your responses concise, helpful, and encouraging.
 
-If the user asks for the current time, date, or day of the week, you MUST use the "getCurrentTime" function to get this information and then present it to the user.
-For other tasks, like generating a meal plan, you should also use the "getCurrentTime" function to be aware of the current date and start the plan from today.
+The user's current time is ${getFormattedUserTime()}.
+Use this information to provide timely and relevant suggestions. For example, when generating a meal plan, start from today's date based on their timezone.
 
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
-When the user wants to see their shopping list, you MUST first use the "getShoppingList" function to retrieve the items. Then, present this list to the user in your response and ask them if they would like to open the shopping list view. If they confirm, you should then call the "showShoppingList" function. Do not call "showShoppingList" without confirmation.
+If the user wants to see their shopping list UI, you can use the "showShoppingList" function. If they want to know what's on the list, you MUST use "getShoppingList".
 If the user wants to add items, you MUST use "addToShoppingList".
 When a user says they've bought items, you MUST use "removeFromShoppingList" to remove them from the list. You should then ask if they want to add the items to their inventory and use "updateInventory" if they agree.
 
@@ -150,16 +151,7 @@ const removeFromShoppingListTool: FunctionDeclaration = {
   },
 };
 
-const getCurrentTimeTool: FunctionDeclaration = {
-  name: "getCurrentTime",
-  description: "Gets the user's current date, day of the week, and time in their local timezone.",
-  parameters: {
-    type: SchemaType.OBJECT,
-    properties: {},
-  },
-};
-
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool, getCurrentTimeTool] }];
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
