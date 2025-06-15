@@ -33,19 +33,19 @@ interface ThoughtProcessProps {
 
 export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card className="h-full flex flex-col min-h-0">
+      <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
           Thought Process
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0 flex-1">
+      <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full">
-          <div className="p-6">
-            <Accordion type="multiple" className="w-full space-y-2">
+          <div className="p-4 space-y-2">
+            <Accordion type="multiple" className="w-full">
               {steps.map((step) => (
-                <AccordionItem value={step.id} key={step.id} className="border-b-0 bg-secondary/30 rounded-md">
+                <AccordionItem value={step.id} key={step.id} className="border-b-0 bg-secondary/30 rounded-md mb-2">
                   <AccordionTrigger
                     disabled={!step.details}
                     className={cn(
@@ -54,7 +54,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                        !step.details && "cursor-default"
                     )}
                   >
-                    <div className="mt-1">
+                    <div className="mt-1 flex-shrink-0">
                       {step.status === 'completed' && (
                         <CheckCircle className="h-5 w-5 text-green-500" />
                       )}
@@ -66,7 +66,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                       )}
                     </div>
                     <p className={cn(
-                        "text-sm font-medium text-left flex-1",
+                        "text-sm font-medium text-left flex-1 min-w-0",
                         step.status === 'completed' && "text-green-700",
                         step.status === 'active' && "text-primary",
                         step.status === 'pending' && "text-muted-foreground"
@@ -76,7 +76,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                   </AccordionTrigger>
                   {step.details && (
                     <AccordionContent className="p-3 pt-0 pl-12 text-xs text-muted-foreground">
-                      <pre className="whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm">{step.details}</pre>
+                      <pre className="whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm overflow-x-auto">{step.details}</pre>
                     </AccordionContent>
                   )}
                 </AccordionItem>
