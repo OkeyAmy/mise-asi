@@ -167,11 +167,14 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string
+          cultural_heritage: string | null
+          family_size: number | null
           goals: string[] | null
           habits: string[] | null
           id: string
           inventory: string[] | null
           meal_ratings: Json | null
+          notes: string | null
           restrictions: string[] | null
           swap_preferences: Json | null
           updated_at: string
@@ -179,11 +182,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cultural_heritage?: string | null
+          family_size?: number | null
           goals?: string[] | null
           habits?: string[] | null
           id?: string
           inventory?: string[] | null
           meal_ratings?: Json | null
+          notes?: string | null
           restrictions?: string[] | null
           swap_preferences?: Json | null
           updated_at?: string
@@ -191,11 +197,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cultural_heritage?: string | null
+          family_size?: number | null
           goals?: string[] | null
           habits?: string[] | null
           id?: string
           inventory?: string[] | null
           meal_ratings?: Json | null
+          notes?: string | null
           restrictions?: string[] | null
           swap_preferences?: Json | null
           updated_at?: string

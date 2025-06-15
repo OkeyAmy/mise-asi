@@ -51,6 +51,9 @@ export interface UserPreferences {
     preferred_cuisines: string[];
     disliked_ingredients: string[];
   };
+  cultural_heritage?: string | null;
+  family_size?: number | null;
+  notes?: string | null;
   created_at: string;
   updated_at: string;
 }

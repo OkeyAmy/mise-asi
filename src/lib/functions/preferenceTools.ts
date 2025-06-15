@@ -12,7 +12,7 @@ export const getUserPreferencesTool: FunctionDeclaration = {
 
 export const updateUserPreferencesTool: FunctionDeclaration = {
   name: "updateUserPreferences",
-  description: "Updates the user's preferences. Use this when the user specifies new allergies, goals, or other long-term preferences.",
+  description: "Updates the user's preferences. Use this when the user specifies new allergies, goals, cultural background, family size, or other long-term preferences and notes.",
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
@@ -24,7 +24,10 @@ export const updateUserPreferencesTool: FunctionDeclaration = {
           preferred_cuisines: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Cuisines the user prefers." },
           disliked_ingredients: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Ingredients the user wants to avoid." }
         }
-      }
+      },
+      cultural_heritage: { type: SchemaType.STRING, description: "The user's cultural heritage or background, e.g. 'Nigerian, Yoruba'." },
+      family_size: { type: SchemaType.NUMBER, description: "The number of people in the user's family or household." },
+      notes: { type: SchemaType.STRING, description: "General notes about the user's preferences, facts, or any other information to remember about them. Use this to store information when the user says 'remember that...' or asks 'what do you know about me?'." }
     },
   },
 };
