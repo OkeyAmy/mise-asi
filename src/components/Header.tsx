@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Package, LogOut, Utensils } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +20,7 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => 
     <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border p-2 sm:p-4">
       <div className="flex justify-between items-center">
         <div className="text-lg font-bold text-primary">
-          Mise
+          NutriMate
         </div>
         <div className="flex gap-1 sm:gap-2">
           <Button 
