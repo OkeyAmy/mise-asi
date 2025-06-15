@@ -18,15 +18,14 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen, onResetConversatio
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border p-2 sm:p-4">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border px-2 py-1 sm:p-4">
       <div className="flex justify-between items-center">
-        <div>
-          <div className="text-lg font-bold text-primary">
-            Mise
-          </div>
-          <div className="text-xs text-muted-foreground hidden sm:block">
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-primary leading-tight select-none">Mise</span>
+          {/* Hide subtitle on xs screens, show on sm+ as one line */}
+          <span className="text-[11px] text-muted-foreground leading-tight select-none hidden xs:inline sm:inline-block whitespace-nowrap">
             Know your kitchen. Own your meals.
-          </div>
+          </span>
         </div>
         <div className="flex gap-1 sm:gap-2">
           <Button 
