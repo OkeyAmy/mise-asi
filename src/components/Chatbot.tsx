@@ -23,6 +23,8 @@ interface ChatbotProps {
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isLeftoversOpen: boolean;
+  setIsLeftoversOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   session?: Session | null;
 }
@@ -32,12 +34,13 @@ export const Chatbot = ({
   setPlan,
   isShoppingListOpen,
   setIsShoppingListOpen,
+  isLeftoversOpen,
+  setIsLeftoversOpen,
   setThoughtSteps,
   session,
 }: ChatbotProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
-  const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
 
   useEffect(() => {
     let storedApiKey = localStorage.getItem("gemini_api_key");

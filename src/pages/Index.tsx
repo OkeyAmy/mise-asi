@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -12,6 +13,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react"
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
+  const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
@@ -49,7 +51,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} />
+      <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
       
       <div className="flex flex-1 pt-20 relative overflow-hidden">
         <div className="flex-1 w-full lg:max-w-2xl">
@@ -58,6 +60,8 @@ const Index = () => {
             setPlan={setMealPlan}
             isShoppingListOpen={isShoppingListOpen}
             setIsShoppingListOpen={setIsShoppingListOpen}
+            isLeftoversOpen={isLeftoversOpen}
+            setIsLeftoversOpen={setIsLeftoversOpen}
             setThoughtSteps={setThoughtSteps}
             session={session}
           />
