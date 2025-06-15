@@ -127,7 +127,9 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   }
 }
 
-// New streaming function with thinking
+// Streaming function with defined thoughts process,
+// but do NOT add any thinkingConfig or advanced config for now.
+// Only use the default streaming capability.
 interface StreamHandlers {
   onThought: (thought: string) => void;
   onFunctionCall: (call: FunctionCall) => void;
@@ -147,6 +149,7 @@ export async function callGeminiWithStreaming(
   }
 
   try {
+    // Use the free-tier model only!
     console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
@@ -154,15 +157,10 @@ export async function callGeminiWithStreaming(
       systemInstruction: SYSTEM_PROMPT,
       tools,
     });
-    
+
+    // Do NOT pass generationConfig or thinkingConfig here!
     const streamingResult = await model.generateContentStream({
       contents,
-      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
-      generationConfig: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
     });
 
     let functionCallEncountered = false;
