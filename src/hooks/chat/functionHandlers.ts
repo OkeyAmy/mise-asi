@@ -93,6 +93,14 @@ export const handleFunctionCall = async (
     try {
       if (onGetInventory) {
         const inventoryItems = await onGetInventory();
+        
+        // Add detailed thought step with JSON formatted inventory data
+        addThoughtStep(
+          "🔨 Preparing to call function: getInventory",
+          JSON.stringify(inventoryItems, null, 2),
+          "completed"
+        );
+        
         if (inventoryItems.length > 0) {
           funcResultMsg = "Here is your current inventory:\n" + inventoryItems.map(item => `- ${item.quantity} ${item.unit} of ${item.item_name}`).join('\n');
         } else {
@@ -152,6 +160,14 @@ export const handleFunctionCall = async (
   } else if (functionCall.name === "getLeftovers") {
     try {
       const leftovers = await onGetLeftovers();
+      
+      // Add detailed thought step with JSON formatted leftovers data
+      addThoughtStep(
+        "🔨 Preparing to call function: getLeftovers",
+        JSON.stringify(leftovers, null, 2),
+        "completed"
+      );
+      
       if (leftovers.length > 0) {
         funcResultMsg = "Here are your current leftovers:\n" + leftovers.map(item => `- ${item.servings} serving(s) of ${item.meal_name} (ID: ${item.id})`).join('\n');
       } else {
@@ -200,6 +216,14 @@ export const handleFunctionCall = async (
     try {
       if (onGetUserPreferences) {
         const prefs = await onGetUserPreferences();
+        
+        // Add detailed thought step with JSON formatted preferences data
+        addThoughtStep(
+          "🔨 Preparing to call function: getUserPreferences",
+          JSON.stringify(prefs, null, 2),
+          "completed"
+        );
+        
         if (prefs) {
           // Only include data that actually exists in the database
           let prefsSummary = "";
