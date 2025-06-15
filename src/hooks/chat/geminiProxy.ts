@@ -8,7 +8,7 @@ export async function callGeminiProxy(history: Content[]) {
         body: { 
             contents: history,
             tools: [
-              { functionDeclarations: tools }
+              { function_declarations: tools }
             ],
         },
     });

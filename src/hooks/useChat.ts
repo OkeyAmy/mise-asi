@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, Part } from "@google/generative-ai";
@@ -10,7 +9,7 @@ import { callGeminiProxy } from "./chat/geminiProxy";
 
 const initialMessages: Message[] = [
   {
-    id: "1",
+    id: 1,
     text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
     sender: "bot",
   },
@@ -113,7 +112,7 @@ export const useChat = (props: UseChatProps) => {
 
     const userInput = inputValue.trim();
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: Date.now(),
       text: userInput,
       sender: "user",
     };
@@ -166,12 +165,12 @@ export const useChat = (props: UseChatProps) => {
             .map((p: Part) => p.text)
             .join("") ?? "";
         
-        const botMessage: Message = { id: (Date.now() + 1).toString(), text: finalText || "I've processed that. What's next?", sender: "bot" };
+        const botMessage: Message = { id: Date.now() + 1, text: finalText || "I've processed that. What's next?", sender: "bot" };
         setMessages(prev => [...prev, botMessage]);
 
       } else {
         const text = response.candidates?.[0]?.content?.parts[0]?.text ?? "Sorry, I'm not sure how to respond.";
-        const botMessage: Message = { id: (Date.now() + 1).toString(), text, sender: "bot" };
+        const botMessage: Message = { id: Date.now() + 1, text, sender: "bot" };
         setMessages(prev => [...prev, botMessage]);
       }
     } catch (error) {

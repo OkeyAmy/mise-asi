@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -15,8 +14,9 @@ export function useChatHistory(session: Session | null) {
       const { error } = await supabase
         .from("chat_sessions")
         .upsert({
-          messages: messages,
-          thought_steps: thoughtSteps,
+          user_id: session.user.id,
+          messages: messages as any,
+          thought_steps: thoughtSteps as any,
         });
       
       if (error) {

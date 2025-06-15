@@ -1,4 +1,3 @@
-
 export interface Meal {
   name: string;
   calories: number;
@@ -72,7 +71,7 @@ export interface LeftoverItem {
 }
 
 export interface Message {
-  id: string;
+  id: number;
   text: string;
   sender: "user" | "bot";
 }
