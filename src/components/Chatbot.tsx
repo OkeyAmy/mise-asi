@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -118,7 +119,7 @@ export const Chatbot = ({
   });
 
   return (
-    <div className="h-screen flex flex-col relative">
+    <div className="h-full flex flex-col relative">
       {/* Chat content */}
       <div className="flex-1 flex flex-col">
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">

@@ -1,4 +1,5 @@
 
+import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,12 @@ interface ChatMessageListProps {
 }
 
 export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isThinking]);
+
   return (
     <ScrollArea className="flex-1 p-6">
       <div className="space-y-4">
@@ -45,6 +52,7 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
     </ScrollArea>
   );
