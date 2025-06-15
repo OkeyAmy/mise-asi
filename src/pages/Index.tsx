@@ -68,19 +68,19 @@ const Index = () => {
           <button
             aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
             onClick={() => setIsRightPanelOpen((prev) => !prev)}
-            className={`absolute top-4 z-20
-              bg-muted border rounded-full p-1 shadow-sm transition-all duration-300
-              hover:bg-muted-foreground/20 lg:left-[-18px] right-4 lg:right-auto`}
-            style={{ width: 32, height: 32 }}
+            className={`fixed lg:absolute top-24 lg:top-4 right-4 lg:left-[-18px] z-50
+              bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300
+              hover:bg-primary/90 hover:shadow-xl
+              w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center`}
           >
             {isRightPanelOpen ? (
               <>
-                <ChevronRight className="w-5 h-5 hidden lg:block" />
+                <ChevronRight className="w-4 h-4 hidden lg:block" />
                 <ChevronDown className="w-5 h-5 lg:hidden" />
               </>
             ) : (
               <>
-                <ChevronLeft className="w-5 h-5 hidden lg:block" />
+                <ChevronLeft className="w-4 h-4 hidden lg:block" />
                 <ChevronUp className="w-5 h-5 lg:hidden" />
               </>
             )}
