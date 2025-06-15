@@ -54,6 +54,7 @@ export interface UserPreferences {
   cultural_heritage?: string | null;
   family_size?: number | null;
   notes?: string | null;
+  key_info?: Record<string, any> | null;
   created_at: string;
   updated_at: string;
 }

@@ -173,6 +173,7 @@ export type Database = {
           habits: string[] | null
           id: string
           inventory: string[] | null
+          key_info: Json | null
           meal_ratings: Json | null
           notes: string | null
           restrictions: string[] | null
@@ -188,6 +189,7 @@ export type Database = {
           habits?: string[] | null
           id?: string
           inventory?: string[] | null
+          key_info?: Json | null
           meal_ratings?: Json | null
           notes?: string | null
           restrictions?: string[] | null
@@ -203,6 +205,7 @@ export type Database = {
           habits?: string[] | null
           id?: string
           inventory?: string[] | null
+          key_info?: Json | null
           meal_ratings?: Json | null
           notes?: string | null
           restrictions?: string[] | null

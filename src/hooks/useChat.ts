@@ -284,12 +284,24 @@ export const useChat = ({
               if (onGetUserPreferences) {
                 const prefs = await onGetUserPreferences();
                 if (prefs) {
-                  let prefsSummary = "Here are your preferences:\n";
+                  let prefsSummary = "Here's what I know about you:\n";
                   if (prefs.goals?.length > 0) prefsSummary += `- Goals: ${prefs.goals.join(', ')}\n`;
                   if (prefs.restrictions?.length > 0) prefsSummary += `- Restrictions: ${prefs.restrictions.join(', ')}\n`;
                   if (prefs.swap_preferences?.preferred_cuisines?.length > 0) prefsSummary += `- Liked Cuisines: ${prefs.swap_preferences.preferred_cuisines.join(', ')}\n`;
                   if (prefs.swap_preferences?.disliked_ingredients?.length > 0) prefsSummary += `- Disliked Ingredients: ${prefs.swap_preferences.disliked_ingredients.join(', ')}\n`;
-                  funcResultMsg = prefsSummary.trim() || "You haven't specified any detailed preferences yet.";
+                  if (prefs.cultural_heritage) prefsSummary += `- Cultural Background: ${prefs.cultural_heritage}\n`;
+                  if (prefs.family_size) prefsSummary += `- Family Size: ${prefs.family_size}\n`;
+                  if (prefs.notes) prefsSummary += `- General Notes: ${prefs.notes}\n`;
+                  if (prefs.key_info && Object.keys(prefs.key_info).length > 0) {
+                      prefsSummary += "- Other Facts:\n";
+                      for (const [key, value] of Object.entries(prefs.key_info as object)) {
+                          prefsSummary += `  - ${key.replace(/_/g, ' ')}: ${value}\n`;
+                      }
+                  }
+                  funcResultMsg = prefsSummary.trim().endsWith("know about you:") 
+                    ? "You haven't specified any detailed preferences yet."
+                    : prefsSummary.trim();
+
                 } else {
                   funcResultMsg = "You haven't set any preferences yet.";
                 }
