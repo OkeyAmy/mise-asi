@@ -33,15 +33,15 @@ interface ThoughtProcessProps {
 
 export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
           Thought Process
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[calc(100vh-120px)] p-6">
+      <CardContent className="p-0 flex-1">
+        <ScrollArea className="h-full p-6">
           <Accordion type="multiple" className="w-full space-y-2">
             {steps.map((step) => (
               <AccordionItem value={step.id} key={step.id} className="border-b-0 bg-secondary/30 rounded-md">

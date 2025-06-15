@@ -109,7 +109,7 @@ export const Chatbot = ({
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0">
           <ChatHeader />
-          <CardContent className="flex-1 flex flex-col p-0">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             <ChatMessageList messages={messages} isThinking={isThinking} />
             <ChatInput
               inputValue={inputValue}

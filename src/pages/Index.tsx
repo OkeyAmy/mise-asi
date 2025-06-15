@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -8,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Package, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package, LogOut, ShoppingCart } from "lucide-react";
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
@@ -49,6 +48,10 @@ const Index = () => {
     <div className="min-h-screen bg-background text-foreground flex">
       <div className={`flex-1 max-w-2xl relative transition-all duration-300`}>
         <div className="absolute top-4 right-4 z-10 flex gap-2">
+          <Button variant="outline" onClick={() => setIsShoppingListOpen(true)}>
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Shopping List
+          </Button>
           <Button variant="outline" onClick={() => navigate('/inventory')}>
             <Package className="w-4 h-4 mr-2" />
             Inventory
