@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -104,10 +105,14 @@ export function useInventory(session: Session | null, onRestockRecommendation?: 
   const upsertItem = async (item: Partial<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & { item_name: string }) => {
     if (!session?.user.id) return;
     
+    // Normalize the item name for consistent matching
+    const normalizedItemName = item.item_name.toLowerCase().trim();
+    
+    // Find existing item by normalized name (case-insensitive)
+    const existingItem = items.find(i => i.item_name.toLowerCase().trim() === normalizedItemName);
+    
     // If quantity is 0 or below, delete the item instead of upserting
     if (item.quantity !== undefined && item.quantity <= 0) {
-      // Find existing item by name and delete it
-      const existingItem = items.find(i => i.item_name.toLowerCase() === item.item_name.toLowerCase());
       if (existingItem) {
         return await deleteItem(existingItem.id, true); // Pass true to indicate this is from quantity update
       }
@@ -115,13 +120,20 @@ export function useInventory(session: Session | null, onRestockRecommendation?: 
       return { data: null, error: null };
     }
     
+    // Use the existing item's proper casing if found, otherwise use the new name
+    const finalItemName = existingItem ? existingItem.item_name : item.item_name;
+    
     const { data, error } = await supabase
       .from("user_inventory")
-      .upsert({ ...item, user_id: session.user.id, }, { onConflict: 'user_id, item_name' })
+      .upsert({ 
+        ...item, 
+        item_name: finalItemName,
+        user_id: session.user.id 
+      }, { onConflict: 'user_id, item_name' })
       .select().single();
     
     if (error) {
-        toast.error(`Failed to upsert ${item.item_name}: ${error.message}`);
+        toast.error(`Failed to upsert ${finalItemName}: ${error.message}`);
     } else if (data) {
         setItems(prev => {
             const index = prev.findIndex(i => i.id === data.id);
