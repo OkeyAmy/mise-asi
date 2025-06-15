@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
 import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini";
+import { InventoryItem } from "@/hooks/useInventory";
 
 interface Message {
   id: number;
@@ -40,7 +40,8 @@ interface UseChatProps {
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   onApiKeyMissing: () => void;
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
-  onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string }[]) => Promise<void>;
+  onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[]) => Promise<void>;
+  onGetInventory?: () => Promise<InventoryItem[]>;
 }
 
 export const useChat = ({
@@ -51,6 +52,7 @@ export const useChat = ({
   onApiKeyMissing,
   onUpdateShoppingList,
   onUpdateInventory,
+  onGetInventory,
 }: UseChatProps) => {
   const [messages, setMessages] = useState<Message[]>(getInitialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -181,7 +183,7 @@ export const useChat = ({
             addThoughtStep("✅ Executed: showShoppingList");
           } else if (functionCall.name === "updateInventory") {
             try {
-              const { items } = functionCall.args as { items: { item_name: string; quantity: number; unit: string; category: string }[] };
+              const { items } = functionCall.args as { items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[] };
               if (onUpdateInventory) {
                 await onUpdateInventory(items);
                 funcResultMsg = "I've updated your inventory with the new items.";
@@ -193,6 +195,23 @@ export const useChat = ({
               funcResultMsg = "I had trouble updating your inventory.";
             }
             addThoughtStep("✅ Executed: updateInventory");
+          } else if (functionCall.name === "getInventory") {
+            try {
+              if (onGetInventory) {
+                const inventoryItems = await onGetInventory();
+                if (inventoryItems.length > 0) {
+                  funcResultMsg = "Here is your current inventory:\n" + inventoryItems.map(item => `- ${item.quantity} ${item.unit} of ${item.item_name}`).join('\n');
+                } else {
+                  funcResultMsg = "Your inventory is currently empty.";
+                }
+              } else {
+                funcResultMsg = "Inventory function is not available right now.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble fetching your inventory.";
+            }
+            addThoughtStep("✅ Executed: getInventory");
           }
 
           const functionResponsePart = {

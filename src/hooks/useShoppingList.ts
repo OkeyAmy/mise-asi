@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingListItem } from "@/data/schema";
@@ -21,7 +20,7 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       .maybeSingle();
 
     if (data && Array.isArray(data.items)) {
-      setItems(data.items as ShoppingListItem[]);
+      setItems(data.items as unknown as ShoppingListItem[]);
     } else {
       setItems([]);
     }
@@ -39,7 +38,7 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       .maybeSingle();
 
     if (data && Array.isArray(data.items)) {
-      const filtered = (data.items as ShoppingListItem[]).filter((i: ShoppingListItem) => i.item !== itemName);
+      const filtered = (data.items as unknown as ShoppingListItem[]).filter((i: ShoppingListItem) => i.item !== itemName);
       await supabase
         .from("shopping_lists")
         .update({ items: filtered as any })

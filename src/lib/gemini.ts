@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { mealPlanningTools } from './functions/mealPlanningTools';
 import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
-import { updateInventoryTool } from "./functions/inventoryTools";
+import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTools";
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -14,6 +14,8 @@ When a user asks for a new meal plan, or to modify the existing one based on new
 If the user asks for their shopping list, you MUST use the "showShoppingList" function. After calling the function, confirm to the user that you're showing it.
 
 If the user mentions items they have in their pantry, have just bought, or are listing their groceries, you MUST use the "updateInventory" function to add or update these items in their inventory. Infer the category for each item based on the available options. After calling the function, confirm to the user that their inventory has been updated.
+
+If the user asks what is in their inventory, what ingredients they have, or to see their pantry, you MUST use the "getInventory" function to retrieve their inventory list. After calling the function, present the list to the user in a readable format.
 
 For any other topic, provide a helpful response or admit if you can't help with a specific request.
 Do not mention you are an AI model.
@@ -92,7 +94,7 @@ const showShoppingListTool: FunctionDeclaration = {
     },
 };
 
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool] }];
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {

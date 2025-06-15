@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -61,7 +60,7 @@ export const Chatbot = ({
     saveList,
   } = useShoppingList(userSession, mealPlanId);
 
-  const { upsertItem } = useInventory(userSession);
+  const { items: inventoryItems, upsertItem } = useInventory(userSession);
 
   const {
     messages,
@@ -87,6 +86,9 @@ export const Chatbot = ({
         });
       }
       toast.success("Your inventory has been updated.");
+    },
+    onGetInventory: async () => {
+      return inventoryItems;
     }
   });
 

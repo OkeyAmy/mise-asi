@@ -22,7 +22,9 @@ export const updateInventoryTool: FunctionDeclaration = {
               category: { 
                 type: SchemaType.STRING, 
                 description: `The category of the item. Must be one of: ${Object.keys(INVENTORY_CATEGORIES).join(', ')}. The labels are: ${categoryDescriptions}.`
-              }
+              },
+              location: { type: SchemaType.STRING, description: "Optional. Where the item is stored (e.g., 'pantry', 'fridge', 'freezer')." },
+              notes: { type: SchemaType.STRING, description: "Optional. Any notes about the item." }
             },
             required: ["item_name", "quantity", "unit", "category"]
           }
@@ -30,4 +32,13 @@ export const updateInventoryTool: FunctionDeclaration = {
       },
       required: ["items"],
     },
+};
+
+export const getInventoryTool: FunctionDeclaration = {
+  name: "getInventory",
+  description: "Retrieves and displays the user's current home inventory/pantry list. Use this when the user asks to see what they have.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {},
+  },
 };
