@@ -192,12 +192,17 @@ export const useChat = (props: UseChatProps) => {
               finalResultResponse.candidates?.[0]?.content.parts
                 .map((p) => p.text)
                 .join("") ?? "";
-            const botMessage: Message = {
-              id: Date.now() + 1,
-              text: finalText,
-              sender: "bot",
-            };
-            setMessages((prev) => [...newMessages, botMessage]);
+
+            const messageText = finalText || funcResultMsg;
+
+            if (messageText) {
+              const botMessage: Message = {
+                id: Date.now() + 1,
+                text: messageText,
+                sender: "bot",
+              };
+              setMessages((prev) => [...prev, botMessage]);
+            }
           } catch (error) {
             const errorMessage =
               error instanceof Error
