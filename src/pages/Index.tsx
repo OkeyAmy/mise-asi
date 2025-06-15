@@ -7,8 +7,7 @@ import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Onboarding } from '@/components/Onboarding';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
@@ -17,7 +16,6 @@ const Index = () => {
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,18 +24,6 @@ const Index = () => {
       setIsRightPanelOpen(false);
     }
   }, []);
-
-  useEffect(() => {
-    const onboardingCompleted = localStorage.getItem('onboarding_completed');
-    if (onboardingCompleted !== 'true') {
-      setShowOnboarding(true);
-    }
-  }, []);
-
-  const handleCloseOnboarding = () => {
-    localStorage.setItem('onboarding_completed', 'true');
-    setShowOnboarding(false);
-  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -64,7 +50,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <Onboarding isOpen={showOnboarding} onClose={handleCloseOnboarding} />
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
       
       <div className="flex flex-1 pt-20 relative overflow-hidden">
