@@ -53,7 +53,8 @@ const Index = () => {
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
       
       <div className="flex flex-1 pt-20 relative overflow-hidden">
-        <div className="flex-1 w-full lg:max-w-2xl">
+        {/* Main chat area - better proportions for desktop */}
+        <div className={`flex-1 transition-all duration-300 ${isRightPanelOpen ? 'lg:max-w-[calc(100%-320px)]' : 'w-full'}`}>
           <Chatbot
             plan={mealPlan}
             setPlan={setMealPlan}
@@ -67,8 +68,8 @@ const Index = () => {
           />
         </div>
         
-        {/* Desktop sidebar */}
-        <div className={`hidden lg:flex relative transition-all duration-300 ${isRightPanelOpen ? 'w-96' : 'w-7'} border-l flex-col min-h-0`}>
+        {/* Desktop sidebar - optimized width */}
+        <div className={`hidden lg:flex relative transition-all duration-300 ${isRightPanelOpen ? 'w-80' : 'w-7'} border-l flex-col min-h-0`}>
           <button
             aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
             onClick={() => setIsRightPanelOpen((prev) => !prev)}
