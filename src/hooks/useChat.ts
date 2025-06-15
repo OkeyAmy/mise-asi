@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Content, FunctionCall } from "@google/generative-ai";
+import { Content, FunctionCall, Part } from "@google/generative-ai";
 import { ThoughtStep } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini/api";
 import { Message, UseChatProps, initialMessages } from "./chat/types";
@@ -128,7 +128,7 @@ export const useChat = (props: UseChatProps) => {
     }));
 
     let accumulatedText = "";
-    let functionCall: FunctionCall | null = null;
+    const functionCalls: FunctionCall[] = [];
 
     await callGeminiWithStreaming(apiKey, history, {
       onThought: (thought: string) => {
@@ -154,32 +154,35 @@ export const useChat = (props: UseChatProps) => {
         });
       },
       onFunctionCall: (call: FunctionCall) => {
-        if (!functionCall) {
-          functionCall = call;
-          addThoughtStep(
-            `🔨 Preparing to call function: ${call.name}`,
-            JSON.stringify(call.args, null, 2),
-            "active"
-          );
-        }
+        functionCalls.push(call);
+        addThoughtStep(
+          `🔨 Preparing to call function: ${call.name}`,
+          JSON.stringify(call.args, null, 2),
+          "active"
+        );
       },
       onComplete: async () => {
         setIsThinking(false);
 
-        if (functionCall) {
-          const funcResultMsg = await handleFunctionCall(functionCall, { ...functionHandlerArgs, addThoughtStep });
+        if (functionCalls.length > 0) {
+          const functionExecutionPromises = functionCalls.map(call => 
+            handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
+          );
 
-          const functionResponsePart = {
+          const functionResults = await Promise.all(functionExecutionPromises);
+
+          const modelTurnParts: Part[] = functionCalls.map(fc => ({ functionCall: fc }));
+          const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
             functionResponse: {
-              name: functionCall.name,
-              response: { success: true, message: funcResultMsg },
+              name: fc.name,
+              response: { success: true, message: functionResults[i] },
             },
-          };
+          }));
 
           const historyWithFunctionCall: Content[] = [
             ...history,
-            { role: "model", parts: [{ functionCall }] },
-            { role: "user", parts: [functionResponsePart] },
+            { role: "model", parts: modelTurnParts },
+            { role: "user", parts: userTurnParts },
           ];
 
           addThoughtStep("💬 Generating final response...");
@@ -193,12 +196,20 @@ export const useChat = (props: UseChatProps) => {
                 .map((p) => p.text)
                 .join("") ?? "";
 
-            const messageText = finalText || funcResultMsg;
+            const messageText = finalText.trim();
 
             if (messageText) {
               const botMessage: Message = {
                 id: Date.now() + 1,
                 text: messageText,
+                sender: "bot",
+              };
+              setMessages((prev) => [...prev, botMessage]);
+            } else {
+              console.warn("Model did not generate a final text response after function calls.");
+              const botMessage: Message = {
+                id: Date.now() + 1,
+                text: "I've processed the information, but I'm not sure what to say next. Could you clarify your request?",
                 sender: "bot",
               };
               setMessages((prev) => [...prev, botMessage]);
