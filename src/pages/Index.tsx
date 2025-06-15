@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -67,11 +68,10 @@ const Index = () => {
           <button
             aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
             onClick={() => setIsRightPanelOpen((prev) => !prev)}
-            className={`absolute z-50
-              bg-primary text-primary-foreground border-2 border-primary rounded-full p-2 shadow-lg transition-all duration-300
-              hover:bg-primary/90 lg:left-[-18px] right-4 lg:right-auto
-              top-4 lg:top-4`}
-            style={{ width: 40, height: 40 }}
+            className={`absolute top-4 z-20
+              bg-muted border rounded-full p-1 shadow-sm transition-all duration-300
+              hover:bg-muted-foreground/20 lg:left-[-18px] right-4 lg:right-auto`}
+            style={{ width: 32, height: 32 }}
           >
             {isRightPanelOpen ? (
               <>
