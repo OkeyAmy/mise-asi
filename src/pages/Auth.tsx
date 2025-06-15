@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -50,7 +49,7 @@ export function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="mx-auto max-w-sm w-full">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome to NutriMate</CardTitle>
+          <CardTitle className="text-2xl">Welcome to Mise</CardTitle>
           <CardDescription>
             Enter your credentials to access your meal plans
           </CardDescription>
@@ -97,4 +96,3 @@ export function AuthPage() {
     </div>
   );
 }
-
