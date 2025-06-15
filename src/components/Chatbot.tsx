@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
@@ -14,6 +13,7 @@ import { useShoppingList } from "@/hooks/useShoppingList";
 import { useInventory } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { usePreferences } from "@/hooks/usePreferences";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -65,6 +65,8 @@ export const Chatbot = ({
 
   const { items: inventoryItems, upsertItem } = useInventory(userSession);
 
+  const { preferences, updatePreferences } = usePreferences(userSession);
+
   const {
     messages,
     inputValue,
@@ -101,7 +103,13 @@ export const Chatbot = ({
     },
     onGetInventory: async () => {
       return inventoryItems;
-    }
+    },
+    onGetUserPreferences: async () => {
+      return preferences;
+    },
+    onUpdateUserPreferences: async (updates) => {
+      await updatePreferences(updates as Partial<UserPreferences>);
+    },
   });
 
   const handleSaveApiKey = (key: string) => {

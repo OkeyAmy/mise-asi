@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
-import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini";
 import { InventoryItem } from "@/hooks/useInventory";
 import { getFormattedUserTime } from "@/lib/time";
@@ -46,6 +46,8 @@ interface UseChatProps {
   shoppingListItems?: ShoppingListItem[];
   onAddItemsToShoppingList?: (items: ShoppingListItem[]) => Promise<void>;
   onRemoveItemsFromShoppingList?: (itemNames: string[]) => Promise<void>;
+  onGetUserPreferences?: () => Promise<UserPreferences | null>;
+  onUpdateUserPreferences?: (updates: Partial<UserPreferences>) => Promise<void>;
 }
 
 export const useChat = ({
@@ -60,6 +62,8 @@ export const useChat = ({
   shoppingListItems,
   onAddItemsToShoppingList,
   onRemoveItemsFromShoppingList,
+  onGetUserPreferences,
+  onUpdateUserPreferences,
 }: UseChatProps) => {
   const [messages, setMessages] = useState<Message[]>(getInitialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -157,7 +161,10 @@ export const useChat = ({
 
         if (functionCall) {
           let funcResultMsg = "";
-          if (functionCall.name === "updateMealPlan") {
+          if (functionCall.name === "suggestMeal") {
+            funcResultMsg = "I have a meal suggestion for you. I will present it now.";
+            addThoughtStep("✅ Executed: suggestMeal");
+          } else if (functionCall.name === "updateMealPlan") {
             const newPlan = functionCall.args as MealPlan;
             setPlan(newPlan);
             funcResultMsg = "Meal plan updated successfully.";
@@ -262,6 +269,41 @@ export const useChat = ({
           } else if (functionCall.name === "getCurrentTime") {
             funcResultMsg = `The current time is ${getFormattedUserTime()}.`;
             addThoughtStep("✅ Executed: getCurrentTime");
+          } else if (functionCall.name === "getUserPreferences") {
+            try {
+              if (onGetUserPreferences) {
+                const prefs = await onGetUserPreferences();
+                if (prefs) {
+                  let prefsSummary = "Here are your preferences:\n";
+                  if (prefs.goals?.length > 0) prefsSummary += `- Goals: ${prefs.goals.join(', ')}\n`;
+                  if (prefs.restrictions?.length > 0) prefsSummary += `- Restrictions: ${prefs.restrictions.join(', ')}\n`;
+                  if (prefs.swap_preferences?.preferred_cuisines?.length > 0) prefsSummary += `- Liked Cuisines: ${prefs.swap_preferences.preferred_cuisines.join(', ')}\n`;
+                  if (prefs.swap_preferences?.disliked_ingredients?.length > 0) prefsSummary += `- Disliked Ingredients: ${prefs.swap_preferences.disliked_ingredients.join(', ')}\n`;
+                  funcResultMsg = prefsSummary.trim() || "You haven't specified any detailed preferences yet.";
+                } else {
+                  funcResultMsg = "You haven't set any preferences yet.";
+                }
+              } else {
+                funcResultMsg = "Preference feature is not available.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble getting your preferences.";
+            }
+            addThoughtStep("✅ Executed: getUserPreferences");
+          } else if (functionCall.name === "updateUserPreferences") {
+            try {
+              if (onUpdateUserPreferences) {
+                await onUpdateUserPreferences(functionCall.args as Partial<UserPreferences>);
+                funcResultMsg = "I've updated your preferences.";
+              } else {
+                funcResultMsg = "Preference feature is not available.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble updating your preferences.";
+            }
+            addThoughtStep("✅ Executed: updateUserPreferences");
           }
 
           const functionResponsePart = {

@@ -37,3 +37,20 @@ export interface ThoughtStep {
   status: 'pending' | 'active' | 'completed';
   details?: string;
 }
+
+export interface UserPreferences {
+  id: string;
+  user_id: string;
+  restrictions: string[];
+  goals: string[];
+  habits: string[];
+  inventory: string[];
+  meal_ratings: Record<string, number>;
+  swap_preferences: {
+    swap_frequency: "low" | "medium" | "high";
+    preferred_cuisines: string[];
+    disliked_ingredients: string[];
+  };
+  created_at: string;
+  updated_at: string;
+}

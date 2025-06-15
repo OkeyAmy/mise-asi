@@ -5,28 +5,25 @@ import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
 import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTools";
 import { getUserTimezone, getFormattedUserTime } from "./time";
+import { getUserPreferencesTool, updateUserPreferencesTool } from './functions/preferenceTools';
+import { suggestMealTool } from './functions/mealSuggestionTools';
 
 const getSystemPrompt = () => `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
-Your goal is to help users with their meal plans, nutrition goals, and pantry management.
-Keep your responses concise, helpful, and encouraging.
+Your goal is to help users eat healthy by providing single, timely meal suggestions. You do not create full 7-day meal plans.
 
-The user's current time is ${getFormattedUserTime()}.
-Use this information to provide timely and relevant suggestions. For example, when generating a meal plan, start from today's date based on their timezone.
-If the user asks for the current time or date, you MUST use the "getCurrentTime" function.
+Your process for each user request should be:
+1.  Determine the user's intent. If they are asking for a meal, proceed.
+2.  Use the "getCurrentTime" function to know what time of day it is for the user. This is crucial for suggesting an appropriate meal (e.g., breakfast in the morning).
+3.  Use the "getInventory" function to see what ingredients they have.
+4.  Use the "getUserPreferences" function to get their goals and restrictions.
+5.  Based on all this information, formulate a single healthy meal suggestion.
+6.  You MUST use the "suggestMeal" function to structure your suggestion. Provide a good justification based on their goals and available ingredients.
+7.  In your response to the user, present the suggested meal clearly.
+8.  If there are missing ingredients from the suggestion, you MUST ask the user if they'd like to add them to their shopping list. If they agree, use "addToShoppingList".
+9.  Handle user preferences: If a user states a new allergy, goal, or dislike, you MUST use "updateUserPreferences".
+10. If a user wants to know what their preferences are, use "getUserPreferences".
 
-When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
-
-If the user wants to see their shopping list, you MUST first use "getShoppingList" to read out the items. Then, you should ask if they want to open the shopping list panel. If they confirm, you MUST then use "showShoppingList". Do not use "showShoppingList" without confirmation.
-If they want to know what's on the list, you MUST use "getShoppingList".
-If the user wants to add items, you MUST use "addToShoppingList".
-When a user says they've bought items, you MUST use "removeFromShoppingList" to remove them from the list. You should then ask if they want to add the items to their inventory and use "updateInventory" if they agree.
-
-If the user mentions items they have in their pantry, have just bought, or are listing their groceries, you MUST use the "updateInventory" function to add or update these items in their inventory. Infer the category for each item based on the available options. After calling the function, confirm to the user that their inventory has been updated.
-
-If the user asks what is in their inventory, what ingredients they have, or to see their pantry, you MUST use the "getInventory" function to retrieve their inventory list. After calling the function, present the list to the user in a readable format.
-
-For any other topic, provide a helpful response or admit if you can't help with a specific request.
-Do not mention you are an AI model.
+Keep your responses concise, helpful, and encouraging. Do not mention you are an AI model.
 `;
 
 const MealSchema: ObjectSchema = {
@@ -162,7 +159,18 @@ const getCurrentTimeTool: FunctionDeclaration = {
   },
 };
 
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool, getCurrentTimeTool] }];
+const tools = [{ functionDeclarations: [
+    suggestMealTool,
+    showShoppingListTool, 
+    updateInventoryTool, 
+    getInventoryTool, 
+    getShoppingListTool, 
+    addToShoppingListTool, 
+    removeFromShoppingListTool, 
+    getCurrentTimeTool,
+    getUserPreferencesTool,
+    updateUserPreferencesTool
+] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
