@@ -29,12 +29,14 @@ export async function callGemini(apiKey: string, messages: OpenAI.Chat.ChatCompl
       dangerouslyAllowBrowser: true,
     });
     
-    const response = await openai.chat.completions.create({
+    const params: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming = {
         model: "gemini-2.5-flash-preview-05-20",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
         tools: mealPlanningTools,
-        reasoning_effort: "low",
-    } as any);
+    };
+    (params as any).reasoning_effort = "low";
+
+    const response = await openai.chat.completions.create(params);
 
     return response;
 
@@ -80,13 +82,15 @@ export async function callGeminiWithStreaming(
       dangerouslyAllowBrowser: true,
     });
 
-    const stream = await openai.chat.completions.create({
+    const params: OpenAI.Chat.ChatCompletionCreateParamsStreaming = {
       model: "gemini-2.5-flash-preview-05-20",
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
       tools: mealPlanningTools,
       stream: true,
-      reasoning_effort: "low",
-    } as any);
+    };
+    (params as any).reasoning_effort = "low";
+    
+    const stream = await openai.chat.completions.create(params);
 
     for await (const chunk of stream) {
       const choice = chunk.choices[0];
