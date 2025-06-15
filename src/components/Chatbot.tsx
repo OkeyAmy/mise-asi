@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -70,7 +69,16 @@ export const Chatbot = ({
     saveList,
   } = useShoppingList(userSession, mealPlanId);
 
-  const { items: inventoryItems, upsertItem } = useInventory(userSession);
+  const { items: inventoryItems, upsertItem } = useInventory(userSession, (item) => {
+    // Handle restock recommendation in the main app
+    if (confirm(`You've run out of ${item.item_name}. Would you like to add it to your shopping list?`)) {
+      addItems([{
+        item: item.item_name,
+        quantity: 1,
+        unit: item.unit
+      }]);
+    }
+  });
 
   const { preferences, updatePreferences } = usePreferences(userSession);
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -32,7 +31,7 @@ export const INVENTORY_CATEGORIES = {
   other: "Other"
 } as const;
 
-export function useInventory(session: Session | null) {
+export function useInventory(session: Session | null, onRestockRecommendation?: (item: InventoryItem) => void) {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -69,7 +68,7 @@ export function useInventory(session: Session | null) {
     
     // If quantity is being updated to 0 or below, delete the item instead
     if (updates.quantity !== undefined && updates.quantity <= 0) {
-      return await deleteItem(id);
+      return await deleteItem(id, true); // Pass true to indicate this is from quantity update
     }
     
     const { data, error } = await supabase
@@ -84,10 +83,21 @@ export function useInventory(session: Session | null) {
     return { data, error };
   };
 
-  const deleteItem = async (id: string) => {
+  const deleteItem = async (id: string, fromQuantityUpdate = false) => {
     if (!session?.user.id) return;
+    
+    // Get the item before deleting it for restock recommendation
+    const itemToDelete = items.find(item => item.id === id);
+    
     const { error } = await supabase.from("user_inventory").delete().eq("id", id);
-    if (!error) setItems(prev => prev.filter(item => item.id !== id));
+    if (!error) {
+      setItems(prev => prev.filter(item => item.id !== id));
+      
+      // Show restock recommendation if item was deleted due to zero quantity
+      if (fromQuantityUpdate && itemToDelete && onRestockRecommendation) {
+        onRestockRecommendation(itemToDelete);
+      }
+    }
     return { error };
   };
 
@@ -99,7 +109,7 @@ export function useInventory(session: Session | null) {
       // Find existing item by name and delete it
       const existingItem = items.find(i => i.item_name.toLowerCase() === item.item_name.toLowerCase());
       if (existingItem) {
-        return await deleteItem(existingItem.id);
+        return await deleteItem(existingItem.id, true); // Pass true to indicate this is from quantity update
       }
       // If item doesn't exist and quantity is 0, just return without doing anything
       return { data: null, error: null };
