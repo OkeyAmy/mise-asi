@@ -1,7 +1,14 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingListItem } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
+
+const isValidUUID = (str: string | null | undefined): str is string => {
+  if (!str) return false;
+  const regex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+  return regex.test(str);
+};
 
 export function useShoppingList(session: Session | null, mealPlanId: string) {
   const [items, setItems] = useState<ShoppingListItem[]>([]);
@@ -12,12 +19,23 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     if (!session?.user.id) return;
 
     setIsLoading(true);
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("shopping_lists")
       .select("items, id")
-      .eq("user_id", session.user.id)
-      .eq("meal_plan_id", mealPlanId)
-      .maybeSingle();
+      .eq("user_id", session.user.id);
+    
+    if (isValidUUID(mealPlanId)) {
+      query = query.eq("meal_plan_id", mealPlanId);
+    } else {
+      query = query.is("meal_plan_id", null);
+    }
+    
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error("Error fetching shopping list:", error);
+    }
 
     if (data && Array.isArray(data.items)) {
       setItems(data.items as unknown as ShoppingListItem[]);
@@ -30,12 +48,24 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
   // Remove multiple items from the shopping list
   const removeItems = async (itemNames: string[]) => {
     if (!session?.user.id || itemNames.length === 0) return;
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("shopping_lists")
       .select("id, items")
-      .eq("user_id", session.user.id)
-      .eq("meal_plan_id", mealPlanId)
-      .maybeSingle();
+      .eq("user_id", session.user.id);
+      
+    if (isValidUUID(mealPlanId)) {
+      query = query.eq("meal_plan_id", mealPlanId);
+    } else {
+      query = query.is("meal_plan_id", null);
+    }
+    
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error("Error preparing to remove items from shopping list:", error);
+      return;
+    }
 
     if (data && Array.isArray(data.items)) {
       const lowerCaseItemNames = itemNames.map(name => name.toLowerCase());
@@ -57,12 +87,24 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
   // Replace the whole shopping list when a new one is generated
   const saveList = async (newItems: ShoppingListItem[]) => {
     if (!session?.user.id) return;
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("shopping_lists")
       .select("id")
-      .eq("user_id", session.user.id)
-      .eq("meal_plan_id", mealPlanId)
-      .maybeSingle();
+      .eq("user_id", session.user.id);
+
+    if (isValidUUID(mealPlanId)) {
+      query = query.eq("meal_plan_id", mealPlanId);
+    } else {
+      query = query.is("meal_plan_id", null);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error("Error saving shopping list (select phase):", error);
+      return;
+    }
 
     if (data && data.id) {
       await supabase
@@ -74,7 +116,7 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
         .from("shopping_lists")
         .insert({
           user_id: session.user.id,
-          meal_plan_id: mealPlanId,
+          meal_plan_id: isValidUUID(mealPlanId) ? mealPlanId : null,
           items: newItems as any,
         });
     }
@@ -86,12 +128,18 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     if (!session?.user.id || itemsToAdd.length === 0) return;
 
     // First, fetch the most up-to-date list from the database to avoid stale state issues.
-    const { data: currentList, error: fetchError } = await supabase
+    let query = supabase
       .from("shopping_lists")
       .select("id, items")
-      .eq("user_id", session.user.id)
-      .eq("meal_plan_id", mealPlanId)
-      .maybeSingle();
+      .eq("user_id", session.user.id);
+
+    if (isValidUUID(mealPlanId)) {
+      query = query.eq("meal_plan_id", mealPlanId);
+    } else {
+      query = query.is("meal_plan_id", null);
+    }
+    
+    const { data: currentList, error: fetchError } = await query.maybeSingle();
 
     if (fetchError) {
       console.error("Error fetching shopping list before adding items:", fetchError);
