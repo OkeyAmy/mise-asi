@@ -13,6 +13,9 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
+    // Log the payload being sent to Gemini for debugging
+    console.log("Payload to Gemini:", JSON.stringify(body, null, 2));
+
     const geminiRes = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
