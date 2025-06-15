@@ -2,47 +2,50 @@
 import { useState } from 'react';
 import { Content } from '@google/generative-ai';
 import { MealPlan as MealPlanType, Message, ThoughtStep } from '@/data/schema';
-import { systemPrompt } from '@/lib/prompts/systemPrompt';
+import { getSystemPrompt } from '@/lib/prompts/systemPrompt';
 import { callGeminiProxy } from './chat/geminiProxy';
 import { useChatHistory } from './useChatHistory';
-import { useChatData } from './useChatData';
 import { executeFunctions } from '@/lib/functions/executeFunctions';
 import { Session } from '@supabase/supabase-js';
-
-export interface UseChatProps {
-  initialMessages?: Message[];
-  initialThoughtSteps?: ThoughtStep[];
-  session: Session | null;
-  plan: MealPlanType;
-  setPlan: React.Dispatch<React.SetStateAction<MealPlanType>>;
-  isShoppingListOpen: boolean;
-  setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  isLeftoversOpen: boolean;
-  setIsLeftoversOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
-  thoughtSteps: ThoughtStep[];
-}
+import { UseChatProps } from './chat/types';
 
 export const useChat = (props: UseChatProps) => {
   const { session, setThoughtSteps } = props;
   const userId = session?.user?.id;
 
-  const { messages, setMessages, thoughtSteps: localThoughtSteps, setThoughtSteps: setLocalThoughtSteps, saveChatHistory } = useChatHistory({
+  const { messages, setMessages, thoughtSteps: localThoughtSteps, setThoughtSteps: setLocalThoughtSteps, saveChatHistory, resetChatHistory } = useChatHistory({
     userId,
-    initialMessages: props.initialMessages,
-    initialThoughtSteps: props.initialThoughtSteps,
+    initialMessages: [],
+    initialThoughtSteps: [],
   });
-
-  const {
-    functionCallHandler,
-    isStarting,
-  } = useChatData(props.plan, props.setPlan, props.setIsShoppingListOpen, props.setIsLeftoversOpen);
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
+  };
+  
+  const resetConversation = () => {
+    resetChatHistory();
+  };
+  
+  const functionCallHandler = {
+    showShoppingList: () => props.setIsShoppingListOpen(true),
+    getShoppingList: () => props.shoppingListItems || [],
+    addToShoppingList: props.onAddItemsToShoppingList,
+    removeFromShoppingList: props.onRemoveItemsFromShoppingList,
+    updateInventory: props.onUpdateInventory,
+    getInventory: props.onGetInventory,
+    getUserPreferences: props.onGetUserPreferences,
+    updateUserPreferences: props.onUpdateUserPreferences,
+    showLeftovers: () => props.setIsLeftoversOpen(true),
+    getLeftovers: props.onGetLeftovers,
+    addLeftover: props.onAddLeftover,
+    updateLeftover: props.onUpdateLeftover,
+    removeLeftover: props.onRemoveLeftover,
+    getCurrentTime: () => new Date().toISOString(),
+    // suggestMeal is complex and needs to be handled separately
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -59,7 +62,7 @@ export const useChat = (props: UseChatProps) => {
 
     try {
       let history: Content[] = [
-        { role: 'user', parts: [{ text: systemPrompt(currentPlan) }] },
+        { role: 'user', parts: [{ text: getSystemPrompt(currentPlan) }] },
         { role: 'model', parts: [{ text: "OK. I'm ready to help you with your meal plan." }] },
         ...newMessages.map((msg): Content => ({
           role: msg.sender === 'user' ? 'user' : 'model',
@@ -80,7 +83,7 @@ export const useChat = (props: UseChatProps) => {
           .map((part: any) => part.functionCall);
 
         if (functionCalls.length > 0) {
-          setThoughtSteps(prev => prev.map(s => s.step === "Thinking..." ? { ...s, step: 'Executing tools...' } : s));
+          setThoughtSteps(prev => prev.map(s => s.step === "Thinking..." ? { ...s, step: 'Executing tools...', status: 'running' } : s));
 
           const { toolResponses, thoughtSteps: executedThoughtSteps } = await executeFunctions(functionCalls, functionCallHandler);
           newThoughtSteps.push(...executedThoughtSteps);
@@ -115,9 +118,9 @@ export const useChat = (props: UseChatProps) => {
       setMessages([...newMessages, errorMessage]);
     } finally {
       setIsLoading(false);
-      setThoughtSteps(prev => prev.map(s => s.status === 'running' ? { ...s, status: 'complete' } : s));
+      setThoughtSteps(prev => prev.map(s => s.status === 'running' ? { ...s, status: 'completed' } : s));
     }
   };
 
-  return { messages, input, isLoading, handleInputChange, handleSubmit, isStarting };
+  return { messages, inputValue: input, setInputValue: setInput, isThinking: isLoading, handleSendMessage: handleSubmit, resetConversation, isStarting: false };
 };
