@@ -21,7 +21,7 @@ export const getShoppingListTool: FunctionDeclaration = {
 
 export const addToShoppingListTool: FunctionDeclaration = {
   name: "addToShoppingList",
-  description: "Adds one or more items to the user's shopping list.",
+  description: "Adds one or more items to the user's shopping list. Use this function when the user confirms they want to add items you have suggested.",
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
