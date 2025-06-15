@@ -73,6 +73,7 @@ export const Chatbot = ({
     setInputValue,
     isThinking,
     handleSendMessage,
+    resetConversation,
   } = useChat({
     apiKey,
     setPlan,
@@ -128,7 +129,7 @@ export const Chatbot = ({
       />
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0">
-          <ChatHeader />
+          <ChatHeader onResetConversation={resetConversation} />
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>

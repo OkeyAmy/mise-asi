@@ -75,6 +75,16 @@ export const useChat = ({
     }
   }, [messages]);
 
+  const resetConversation = () => {
+    setMessages(initialMessages);
+    setInputValue("");
+    setIsThinking(false);
+    setThoughtSteps([]);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("chat_history", JSON.stringify(initialMessages));
+    }
+  };
+
   const addThoughtStep = (
     step: string,
     details?: string,
@@ -372,5 +382,6 @@ export const useChat = ({
     setInputValue,
     isThinking,
     handleSendMessage,
+    resetConversation,
   };
 };
