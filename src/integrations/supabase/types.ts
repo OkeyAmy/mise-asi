@@ -164,6 +164,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_leftovers: {
+        Row: {
+          created_at: string
+          date_created: string
+          id: string
+          meal_name: string
+          notes: string | null
+          servings: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_created?: string
+          id?: string
+          meal_name: string
+          notes?: string | null
+          servings?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_created?: string
+          id?: string
+          meal_name?: string
+          notes?: string | null
+          servings?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string

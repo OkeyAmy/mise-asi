@@ -58,3 +58,14 @@ export interface UserPreferences {
   created_at: string;
   updated_at: string;
 }
+
+export interface LeftoverItem {
+  id: string;
+  user_id: string;
+  meal_name: string;
+  servings: number;
+  date_created: string; // ISO date string
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}

@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem } from "@/data/schema";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
@@ -14,6 +15,8 @@ import { useInventory } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { usePreferences } from "@/hooks/usePreferences";
+import { useLeftovers } from "@/hooks/useLeftovers";
+import { LeftoversDialog } from "./LeftoversDialog";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -34,6 +37,7 @@ export const Chatbot = ({
 }: ChatbotProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
+  const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
 
   useEffect(() => {
     let storedApiKey = localStorage.getItem("gemini_api_key");
@@ -66,6 +70,15 @@ export const Chatbot = ({
   const { items: inventoryItems, upsertItem } = useInventory(userSession);
 
   const { preferences, updatePreferences } = usePreferences(userSession);
+
+  const {
+    items: leftoverItems,
+    isLoading: isLeftoversLoading,
+    addLeftover,
+    updateLeftover,
+    removeLeftover,
+    getLeftovers,
+  } = useLeftovers(userSession);
 
   const {
     messages,
@@ -111,6 +124,25 @@ export const Chatbot = ({
     onUpdateUserPreferences: async (updates) => {
       await updatePreferences(updates as Partial<UserPreferences>);
     },
+    // Leftovers props
+    setIsLeftoversOpen,
+    onGetLeftovers: async () => {
+      await getLeftovers(); // Refreshes the list
+      // After fetching, we need to return the fresh data.
+      // The `leftoverItems` state might not be updated yet.
+      // A direct fetch and return is more reliable here.
+      const { data } = await supabase.from('user_leftovers').select('*').order('date_created', { ascending: false });
+      return data || [];
+    },
+    onAddLeftover: async (item) => {
+      await addLeftover(item);
+    },
+    onUpdateLeftover: async (id, updates) => {
+      await updateLeftover(id, updates);
+    },
+    onRemoveLeftover: async (id) => {
+      await removeLeftover(id);
+    },
   });
 
   const handleSaveApiKey = (key: string) => {
@@ -148,6 +180,23 @@ export const Chatbot = ({
             isLoading={isListLoading}
             onRemove={removeItem}
           />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
+        <DialogContent className="max-w-md">
+            <LeftoversDialog 
+                items={leftoverItems}
+                isLoading={isLeftoversLoading}
+                onRemove={removeLeftover}
+                onUpdateServings={(id, servings) => {
+                  if (servings === 0) {
+                    removeLeftover(id);
+                    toast.info("Leftover removed as servings reached 0.");
+                  } else {
+                    updateLeftover(id, { servings });
+                  }
+                }}
+            />
         </DialogContent>
       </Dialog>
     </div>
