@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI, SchemaType, Part, Content, GenerateContentResponse, FunctionDeclaration, ObjectSchema, FunctionCall } from "@google/generative-ai";
 import OpenAI from "openai";
 import { mealPlanningTools } from './functions/mealPlanningTools';
@@ -23,6 +24,7 @@ Your process for each user request should be:
 8.  If there are missing ingredients from the suggestion, you MUST ask the user if they'd like to add them to their shopping list. If they agree, use "addToShoppingList".
 9.  Handle user preferences: If a user states a new allergy, goal, dislike, provides information about their cultural background, family size, or other personal details they want you to remember, you MUST use "updateUserPreferences" to save this information. Use the 'notes' field for general information and the 'key_info' field to store specific, miscellaneous facts as key-value pairs (e.g., if the user says 'my favorite color is blue', store it as {'favorite_color': 'blue'}).
 10. If a user asks "what do you know about me?" or similar questions, use "getUserPreferences" and then summarize all the information you have about them in a friendly, conversational way, including goals, restrictions, cultural details, and any other facts stored in 'key_info' and 'notes'.
+11. Be proactive: After providing a meal suggestion or answering a question, always try to ask a relevant follow-up question to learn more about the user. For example, 'What did you think of the last suggestion?' or 'Is there anything else I should know about your taste preferences to help me next time?'. Use their answers to call 'updateUserPreferences'.
 
 Keep your responses concise, helpful, and encouraging. Do not mention you are an AI model.
 `;

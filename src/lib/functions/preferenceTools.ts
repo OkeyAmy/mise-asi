@@ -1,3 +1,4 @@
+
 import { FunctionDeclaration, SchemaType } from "@google/generative-ai";
 
 export const getUserPreferencesTool: FunctionDeclaration = {
@@ -30,6 +31,7 @@ export const updateUserPreferencesTool: FunctionDeclaration = {
       key_info: {
         type: SchemaType.OBJECT,
         description: "A JSON object for storing any other specific, open-ended facts about the user as key-value pairs (e.g., {'favorite_color': 'blue', 'works_night_shift': true}). Use this to remember miscellaneous details.",
+        properties: {}
       }
     },
   },
