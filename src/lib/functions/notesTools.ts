@@ -1,13 +1,15 @@
 
-export const updateUserNotesTool = {
+import { FunctionDeclaration, SchemaType } from "@google/generative-ai";
+
+export const updateUserNotesTool: FunctionDeclaration = {
   name: "updateUserNotes",
-  description: "Updates or appends to the user's general notes. Use this to remember miscellaneous facts, preferences, or context that don't fit into other specific functions. For example: 'My friend is visiting next week', 'I prefer spicy food', 'I want to try cooking more with fish'. The new notes will be appended to existing ones.",
+  description: "Updates the user's general notes with new information. Use this to remember miscellaneous facts or context provided by the user.",
   parameters: {
-    type: "object",
+    type: SchemaType.OBJECT,
     properties: {
       notes: {
-        type: "string",
-        description: "The new piece of information or note to remember about the user.",
+        type: SchemaType.STRING,
+        description: "The new content to be saved in the user's notes. This will overwrite existing notes.",
       },
     },
     required: ["notes"],
