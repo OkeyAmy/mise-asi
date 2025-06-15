@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { LeftoverItem } from '@/data/schema';
@@ -90,8 +89,17 @@ export const useLeftovers = (session: Session | null) => {
                 .select();
             
             if (error) throw error;
-            if (data) {
-                toast.success(`'${data[0].meal_name}' added to leftovers.`);
+            if (data && data.length > 0) {
+                const newLeftover = data[0];
+                // Manually update state for immediate feedback, also handled by realtime
+                setItems(currentItems => {
+                    if (currentItems.some(item => item.id === newLeftover.id)) {
+                        return currentItems; // Already added by realtime
+                    }
+                    return [newLeftover, ...currentItems]
+                        .sort((a, b) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime());
+                });
+                toast.success(`'${newLeftover.meal_name}' added to leftovers.`);
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to add leftover.');
@@ -101,13 +109,21 @@ export const useLeftovers = (session: Session | null) => {
     const updateLeftover = async (id: string, updates: Partial<{ servings: number; notes: string }>) => {
         if (!session) return;
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('user_leftovers')
                 .update(updates)
-                .eq('id', id);
+                .eq('id', id)
+                .select();
             
             if (error) throw error;
-            toast.success('Leftover updated.');
+            if (data && data.length > 0) {
+                const updatedItem = data[0];
+                // Manually update state for immediate feedback
+                setItems(currentItems => currentItems.map(item => 
+                    item.id === updatedItem.id ? updatedItem : item
+                ));
+                toast.success('Leftover updated.');
+            }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to update leftover.');
         }
@@ -122,6 +138,8 @@ export const useLeftovers = (session: Session | null) => {
                 .eq('id', id);
             
             if (error) throw error;
+            // Manually update state for immediate feedback
+            setItems(currentItems => currentItems.filter(item => item.id !== id));
             toast.success('Leftover removed.');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to remove leftover.');
