@@ -4,6 +4,7 @@ import { Content, FunctionCall } from "@google/generative-ai";
 import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini";
 import { InventoryItem } from "@/hooks/useInventory";
+import { getFormattedUserTime } from "@/lib/time";
 
 interface Message {
   id: number;
@@ -258,6 +259,9 @@ export const useChat = ({
               funcResultMsg = "I had trouble removing items from your shopping list.";
             }
             addThoughtStep("✅ Executed: removeFromShoppingList");
+          } else if (functionCall.name === "getCurrentTime") {
+            funcResultMsg = `The current time is ${getFormattedUserTime()}.`;
+            addThoughtStep("✅ Executed: getCurrentTime");
           }
 
           const functionResponsePart = {

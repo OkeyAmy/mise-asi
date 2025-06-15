@@ -12,10 +12,12 @@ Keep your responses concise, helpful, and encouraging.
 
 The user's current time is ${getFormattedUserTime()}.
 Use this information to provide timely and relevant suggestions. For example, when generating a meal plan, start from today's date based on their timezone.
+If the user asks for the current time or date, you MUST use the "getCurrentTime" function.
 
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
-If the user wants to see their shopping list UI, you can use the "showShoppingList" function. If they want to know what's on the list, you MUST use "getShoppingList".
+If the user wants to see their shopping list, you MUST first use "getShoppingList" to read out the items. Then, you should ask if they want to open the shopping list panel. If they confirm, you MUST then use "showShoppingList". Do not use "showShoppingList" without confirmation.
+If they want to know what's on the list, you MUST use "getShoppingList".
 If the user wants to add items, you MUST use "addToShoppingList".
 When a user says they've bought items, you MUST use "removeFromShoppingList" to remove them from the list. You should then ask if they want to add the items to their inventory and use "updateInventory" if they agree.
 
@@ -151,7 +153,16 @@ const removeFromShoppingListTool: FunctionDeclaration = {
   },
 };
 
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool] }];
+const getCurrentTimeTool: FunctionDeclaration = {
+  name: "getCurrentTime",
+  description: "Gets the current date, day of the week, and time for the user.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {},
+  },
+};
+
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool, getCurrentTimeTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
