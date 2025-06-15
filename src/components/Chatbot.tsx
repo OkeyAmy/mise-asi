@@ -10,6 +10,9 @@ import { useChat } from "@/hooks/useChat";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
+import { useShoppingList } from "@/hooks/useShoppingList";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -17,9 +20,17 @@ interface ChatbotProps {
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
+  session?: Session | null;
 }
 
-export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen, setThoughtSteps }: ChatbotProps) => {
+export const Chatbot = ({
+  plan,
+  setPlan,
+  isShoppingListOpen,
+  setIsShoppingListOpen,
+  setThoughtSteps,
+  session,
+}: ChatbotProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
 
@@ -33,6 +44,25 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setApiKey(storedApiKey);
   }, []);
 
+  // Use the actual active mealPlan's ID
+  const mealPlanId = plan.plan_id;
+
+  // Maintain session (fallback for old prop pattern)
+  const [userSession, setUserSession] = useState<Session | null>(
+    session || null
+  );
+  useEffect(() => {
+    if (session) setUserSession(session);
+  }, [session]);
+
+  // Hook for getting/updating shopping list in realtime with Supabase
+  const {
+    items: shoppingListItems,
+    isLoading: isListLoading,
+    removeItem,
+    saveList,
+  } = useShoppingList(userSession, mealPlanId);
+
   const {
     messages,
     inputValue,
@@ -45,6 +75,10 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setIsShoppingListOpen,
     setThoughtSteps,
     onApiKeyMissing: () => setIsApiKeyDialogOpen(true),
+    onUpdateShoppingList: (newList: ShoppingListItem[]) => {
+      // Overwrite DB and UI version of shopping list whenever AI asks to refresh
+      saveList(newList);
+    },
   });
 
   const handleSaveApiKey = (key: string) => {
@@ -54,47 +88,34 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     toast.success("API Key saved successfully!");
   };
 
-  const generateShoppingList = (): ShoppingListItem[] => {
-    const allIngredients = new Map<string, ShoppingListItem>();
-    plan.days.forEach(day => {
-      Object.values(day.meals).forEach(meal => {
-        meal.ingredients.forEach(ing => {
-          if (allIngredients.has(ing.item)) {
-            const existing = allIngredients.get(ing.item)!;
-            existing.quantity += ing.quantity;
-          } else {
-            allIngredients.set(ing.item, { ...ing });
-          }
-        });
-      });
-    });
-    return Array.from(allIngredients.values());
-  };
-
   return (
     <div className="h-screen flex flex-col">
-        <ApiKeyDialog 
-            isOpen={isApiKeyDialogOpen}
-            onClose={() => setIsApiKeyDialogOpen(false)}
-            onSave={handleSaveApiKey}
-        />
-        <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
-            <Card className="flex flex-col h-full shadow-none border-0">
-              <ChatHeader />
-              <CardContent className="flex-1 flex flex-col p-0">
-                <ChatMessageList messages={messages} isThinking={isThinking} />
-                <ChatInput 
-                  inputValue={inputValue}
-                  setInputValue={setInputValue}
-                  handleSendMessage={handleSendMessage}
-                  isThinking={isThinking}
-                />
-              </CardContent>
-            </Card>
-            <DialogContent className="max-w-md">
-                <ShoppingList items={generateShoppingList()} />
-            </DialogContent>
-        </Dialog>
+      <ApiKeyDialog
+        isOpen={isApiKeyDialogOpen}
+        onClose={() => setIsApiKeyDialogOpen(false)}
+        onSave={handleSaveApiKey}
+      />
+      <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
+        <Card className="flex flex-col h-full shadow-none border-0">
+          <ChatHeader />
+          <CardContent className="flex-1 flex flex-col p-0">
+            <ChatMessageList messages={messages} isThinking={isThinking} />
+            <ChatInput
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              handleSendMessage={handleSendMessage}
+              isThinking={isThinking}
+            />
+          </CardContent>
+        </Card>
+        <DialogContent className="max-w-md">
+          <ShoppingList
+            items={shoppingListItems}
+            isLoading={isListLoading}
+            onRemove={removeItem}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

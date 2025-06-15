@@ -24,7 +24,6 @@ const Index = () => {
         navigate('/auth');
       }
     });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -33,7 +32,6 @@ const Index = () => {
         navigate('/auth');
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
 
@@ -42,21 +40,24 @@ const Index = () => {
   };
   
   if (!session) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       <div className="flex-1 max-w-2xl relative">
-         <div className="absolute top-4 right-4 z-10">
-            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+        <div className="absolute top-4 right-4 z-10">
+          <Button variant="outline" onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
-        <Chatbot 
-          plan={mealPlan} 
-          setPlan={setMealPlan} 
+        <Chatbot
+          plan={mealPlan}
+          setPlan={setMealPlan}
           isShoppingListOpen={isShoppingListOpen}
           setIsShoppingListOpen={setIsShoppingListOpen}
           setThoughtSteps={setThoughtSteps}
+          session={session}
         />
       </div>
       <div className="w-96 border-l p-4">
@@ -67,4 +68,3 @@ const Index = () => {
 };
 
 export default Index;
-
