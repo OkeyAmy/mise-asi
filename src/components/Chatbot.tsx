@@ -24,7 +24,6 @@ interface ChatbotProps {
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   session?: Session | null;
   thoughtSteps: ThoughtStep[];
-  onResetConversationReady: (resetFn: () => void) => void;
 }
 
 export const Chatbot = ({
@@ -37,7 +36,6 @@ export const Chatbot = ({
   setThoughtSteps,
   session,
   thoughtSteps,
-  onResetConversationReady,
 }: ChatbotProps) => {
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
@@ -115,16 +113,11 @@ export const Chatbot = ({
     thoughtSteps,
   });
 
-  // Expose the reset function to the parent
-  useEffect(() => {
-    onResetConversationReady(resetConversation);
-  }, [resetConversation, onResetConversationReady]);
-
   return (
     <div className="h-screen flex flex-col relative">
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
-          <ChatHeader />
+          <ChatHeader onResetConversation={resetConversation} />
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>
