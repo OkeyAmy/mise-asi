@@ -66,6 +66,12 @@ export function useInventory(session: Session | null) {
 
   const updateItem = async (id: string, updates: Partial<InventoryItem>) => {
     if (!session?.user.id) return;
+    
+    // If quantity is being updated to 0 or below, delete the item instead
+    if (updates.quantity !== undefined && updates.quantity <= 0) {
+      return await deleteItem(id);
+    }
+    
     const { data, error } = await supabase
       .from("user_inventory")
       .update(updates)
@@ -87,6 +93,18 @@ export function useInventory(session: Session | null) {
 
   const upsertItem = async (item: Partial<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & { item_name: string }) => {
     if (!session?.user.id) return;
+    
+    // If quantity is 0 or below, delete the item instead of upserting
+    if (item.quantity !== undefined && item.quantity <= 0) {
+      // Find existing item by name and delete it
+      const existingItem = items.find(i => i.item_name.toLowerCase() === item.item_name.toLowerCase());
+      if (existingItem) {
+        return await deleteItem(existingItem.id);
+      }
+      // If item doesn't exist and quantity is 0, just return without doing anything
+      return { data: null, error: null };
+    }
+    
     const { data, error } = await supabase
       .from("user_inventory")
       .upsert({ ...item, user_id: session.user.id, }, { onConflict: 'user_id, item_name' })

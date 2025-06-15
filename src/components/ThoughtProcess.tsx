@@ -1,9 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { ThoughtStep } from "@/data/schema";
-import { CheckCircle, Circle, Loader2, Wrench } from "lucide-react";
+import { CheckCircle, Circle, Loader2, Wrench, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface ThoughtProcessProps {
   steps: ThoughtStep[];
@@ -28,6 +30,20 @@ const getFunctionCallIcon = (step: string) => {
 };
 
 export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+
+  const toggleStepExpansion = (stepId: string) => {
+    setExpandedSteps(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(stepId)) {
+        newSet.delete(stepId);
+      } else {
+        newSet.add(stepId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <Card className="h-full flex flex-col min-h-0">
       <CardHeader className="flex-shrink-0">
@@ -67,13 +83,28 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                       {step.step}
                   </p>
                   {step.details && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      <pre className="whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm overflow-x-auto border">
-                        {step.step.includes("🔨 Preparing to call function") 
-                          ? formatFunctionCallDetails(step.details)
-                          : step.details
-                        }
-                      </pre>
+                    <div className="mt-1">
+                      <Collapsible 
+                        open={expandedSteps.has(step.id)} 
+                        onOpenChange={() => toggleStepExpansion(step.id)}
+                      >
+                        <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          {expandedSteps.has(step.id) ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          {step.step.includes("🔨 Preparing to call function") ? "Function Data" : "Details"}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm overflow-x-auto border">
+                            {step.step.includes("🔨 Preparing to call function") 
+                              ? formatFunctionCallDetails(step.details)
+                              : step.details
+                            }
+                          </pre>
+                        </CollapsibleContent>
+                      </Collapsible>
                     </div>
                   )}
                 </div>
