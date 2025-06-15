@@ -3,17 +3,18 @@ import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem 
 import { InventoryItem } from "@/hooks/useInventory";
 import { Session } from "@supabase/supabase-js";
 
-// Fix: Message.id should be string everywhere
 export interface Message {
-  id: string;
+  id: number;
   text: string;
   sender: "user" | "bot";
 }
 
 export interface UseChatProps {
+  apiKey: string | null;
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
+  onApiKeyMissing: () => void;
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
   onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[]) => Promise<void>;
   onGetInventory?: () => Promise<InventoryItem[]>;
@@ -35,7 +36,7 @@ export interface UseChatProps {
 
 export const initialMessages: Message[] = [
   {
-    id: "1",
+    id: 1,
     text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
     sender: "bot",
   },

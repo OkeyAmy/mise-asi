@@ -31,17 +31,10 @@ export interface ShoppingListItem {
   unit: string;
 }
 
-// Fix: id should be a string (Supabase UIDs, Date.now().toString(), etc)
-export interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'bot';
-}
-
 export interface ThoughtStep {
   id: string;
   step: string;
-  status: 'pending' | 'active' | 'completed' | 'running';
+  status: 'pending' | 'active' | 'completed';
   details?: string;
 }
 

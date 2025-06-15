@@ -1,125 +1,189 @@
-import { useState } from 'react';
-import { Content } from '@google/generative-ai';
-import { MealPlan as MealPlanType, Message, ThoughtStep } from '@/data/schema';
-import { getSystemPrompt } from '@/lib/prompts/systemPrompt';
-import { callGeminiProxy } from './chat/geminiProxy';
-import { useChatHistory } from './useChatHistory';
-import executeFunctions from '@/lib/functions/executeFunctions';
-import { Session } from '@supabase/supabase-js';
-import { UseChatProps } from './chat/types';
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { Content, Part } from "@google/generative-ai";
+import { ThoughtStep } from "@/data/schema";
+import { Message, UseChatProps, initialMessages } from "./chat/types";
+import { handleFunctionCall } from "./chat/functionHandlers";
+import { useChatHistory } from "./useChatHistory";
+import { callGeminiProxy } from "./geminiProxy";
 
 export const useChat = (props: UseChatProps) => {
-  const { session, setThoughtSteps } = props;
-  const userId = session?.user?.id;
-
-  const { messages, setMessages, thoughtSteps: localThoughtSteps, setThoughtSteps: setLocalThoughtSteps, saveChatHistory, resetChatHistory } = useChatHistory({
-    userId,
-    initialMessages: [],
-    initialThoughtSteps: [],
-  });
-
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
+  const {
+    setThoughtSteps,
+    session,
+    ...functionHandlerArgs
+  } = props;
   
-  const resetConversation = () => {
-    resetChatHistory();
-  };
-  
-  const functionCallHandler = {
-    showShoppingList: () => props.setIsShoppingListOpen(true),
-    getShoppingList: () => props.shoppingListItems || [],
-    addToShoppingList: props.onAddItemsToShoppingList,
-    removeFromShoppingList: props.onRemoveItemsFromShoppingList,
-    updateInventory: props.onUpdateInventory,
-    getInventory: props.onGetInventory,
-    getUserPreferences: props.onGetUserPreferences,
-    updateUserPreferences: props.onUpdateUserPreferences,
-    showLeftovers: () => props.setIsLeftoversOpen(true),
-    getLeftovers: props.onGetLeftovers,
-    addLeftover: props.onAddLeftover,
-    updateLeftover: props.onUpdateLeftover,
-    removeLeftover: props.onRemoveLeftover,
-    getCurrentTime: () => new Date().toISOString(),
-    // suggestMeal is complex and needs to be handled separately
-  };
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [inputValue, setInputValue] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || !userId) return;
+  const { saveChatSession, loadChatSession, clearChatSession } = useChatHistory(session);
 
-    const newUserMessage: Message = { id: Date.now().toString(), text: input, sender: 'user' };
-    const newMessages = [...messages, newUserMessage];
-    setMessages(newMessages);
-    setInput('');
-    setIsLoading(true);
-
-    const currentPlan = props.plan;
-
-    try {
-      let history: Content[] = [
-        { role: 'user', parts: [{ text: getSystemPrompt(currentPlan) }] },
-        { role: 'model', parts: [{ text: "OK. I'm ready to help you with your meal plan." }] },
-        ...newMessages.map((msg): Content => ({
-          role: msg.sender === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.text }],
-        })),
-      ];
-
-      let responseData;
-      let newThoughtSteps: ThoughtStep[] = [];
-
-      // Loop to handle multiple function calls
-      while (true) {
-        setThoughtSteps(prev => [...prev, { id: Date.now().toString(), step: "Thinking...", status: 'running' }]);
-        responseData = await callGeminiProxy(history);
-        
-        const functionCalls = responseData.candidates[0].content.parts
-          .filter((part: any) => part.functionCall)
-          .map((part: any) => part.functionCall);
-
-        if (functionCalls.length > 0) {
-          setThoughtSteps(prev => prev.map(s => s.step === "Thinking..." ? { ...s, step: 'Executing tools...', status: 'running' } : s));
-
-          const { toolResponses, thoughtSteps: executedThoughtSteps } = await executeFunctions(functionCalls, functionCallHandler);
-          newThoughtSteps.push(...executedThoughtSteps);
-          setThoughtSteps(prev => [...prev, ...executedThoughtSteps]);
-          
-          history.push(
-            {
-              role: 'model',
-              parts: responseData.candidates[0].content.parts,
-            },
-            {
-              role: 'function',
-              parts: toolResponses,
-            }
-          );
-
+  // Load chat history when user session is available
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (session?.user && !isInitialized) {
+        const savedSession = await loadChatSession();
+        if (savedSession) {
+          setMessages(savedSession.messages);
+          setThoughtSteps(savedSession.thoughtSteps);
         } else {
-          break;
+          // If no saved session, try to load from localStorage as fallback
+          try {
+            const stored = localStorage.getItem("chat_history");
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setMessages(parsed);
+              }
+            }
+          } catch (e) {
+            console.error("Could not parse chat history from local storage", e);
+          }
         }
+        setIsInitialized(true);
       }
+    };
 
-      const modelResponse = responseData.candidates[0].content.parts[0].text;
-      const newBotMessage: Message = { id: Date.now().toString(), text: modelResponse, sender: 'bot' };
-      const finalMessages = [...newMessages, newBotMessage];
-      setMessages(finalMessages);
-      setLocalThoughtSteps(prev => [...prev, ...newThoughtSteps]);
-      await saveChatHistory(finalMessages, [...localThoughtSteps, ...newThoughtSteps]);
+    loadHistory();
+  }, [session, loadChatSession, isInitialized, setThoughtSteps]);
 
-    } catch (error) {
-      console.error("Error during chat:", error);
-      const errorMessage: Message = { id: Date.now().toString(), text: "Sorry, something went wrong. Please try again.", sender: 'bot' };
-      setMessages([...newMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-      setThoughtSteps(prev => prev.map(s => s.status === 'running' ? { ...s, status: 'completed' } : s));
+  // Save to database whenever messages or thought steps change
+  useEffect(() => {
+    if (session?.user && isInitialized && messages.length > 0) {
+      // Debounce the save operation
+      const timeoutId = setTimeout(() => {
+        const currentThoughtSteps = props.thoughtSteps || [];
+        saveChatSession(messages, currentThoughtSteps);
+        // Also save to localStorage as backup
+        localStorage.setItem("chat_history", JSON.stringify(messages));
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, session, isInitialized, saveChatSession, props.thoughtSteps]);
+
+  const resetConversation = async () => {
+    setMessages(initialMessages);
+    setInputValue("");
+    setIsThinking(false);
+    setThoughtSteps([]);
+    
+    // Clear from database
+    await clearChatSession();
+    
+    // Clear from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("chat_history", JSON.stringify(initialMessages));
     }
   };
 
-  return { messages, inputValue: input, setInputValue: setInput, isThinking: isLoading, handleSendMessage: handleSubmit, resetConversation, isStarting: false };
+  const addThoughtStep = (
+    step: string,
+    details?: string,
+    status: "pending" | "active" | "completed" = "completed"
+  ) => {
+    const newStep: ThoughtStep = {
+      id: Date.now().toString() + Math.random(),
+      step,
+      status,
+      details: details || step,
+    };
+    setThoughtSteps((prev) => [...prev, newStep]);
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isThinking) return;
+
+    setThoughtSteps(prev => 
+      prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))
+    );
+
+    const userInput = inputValue.trim();
+    const userMessage: Message = {
+      id: Date.now(),
+      text: userInput,
+      sender: "user",
+    };
+
+    const newMessages: Message[] = [...messages, userMessage];
+    setMessages(newMessages);
+    setInputValue("");
+    setIsThinking(true);
+    addThoughtStep("🤔 Thinking...");
+
+    const history: Content[] = newMessages.map((msg) => ({
+      role: msg.sender === "bot" ? "model" : "user",
+      parts: [{ text: msg.text }],
+    }));
+
+    try {
+      const response = await callGeminiProxy(history);
+
+      const functionCalls = response.candidates?.[0]?.content?.parts
+        .filter((p: Part) => p.functionCall)
+        .map((p: Part) => p.functionCall) || [];
+
+      if (functionCalls.length > 0) {
+        addThoughtStep(`🔨 Calling functions: ${functionCalls.map(c => c.name).join(', ')}`);
+        
+        const functionExecutionPromises = functionCalls.map((call: any) => 
+          handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
+        );
+
+        const functionResults = await Promise.all(functionExecutionPromises);
+
+        const modelTurnParts: Part[] = functionCalls.map((fc: any) => ({ functionCall: fc }));
+        const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
+          functionResponse: {
+            name: fc.name,
+            response: { success: true, message: functionResults[i] },
+          },
+        }));
+
+        const historyWithFunctionCall: Content[] = [
+          ...history,
+          { role: "model", parts: modelTurnParts },
+          { role: "user", parts: userTurnParts },
+        ];
+
+        addThoughtStep("💬 Generating final response...");
+        const finalResultResponse = await callGeminiProxy(historyWithFunctionCall);
+        
+        const finalText = finalResultResponse.candidates?.[0]?.content.parts
+            .map((p: Part) => p.text)
+            .join("") ?? "";
+        
+        const botMessage: Message = { id: Date.now() + 1, text: finalText || "I've processed that. What's next?", sender: "bot" };
+        setMessages(prev => [...prev, botMessage]);
+
+      } else {
+        const text = response.candidates?.[0]?.content?.parts[0]?.text ?? "Sorry, I'm not sure how to respond.";
+        const botMessage: Message = { id: Date.now() + 1, text, sender: "bot" };
+        setMessages(prev => [...prev, botMessage]);
+      }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast.error(errorMessage);
+        addThoughtStep(`❌ Error: ${errorMessage}`);
+    } finally {
+        setIsThinking(false);
+        setThoughtSteps((prev) =>
+          prev.map((s) => ({ ...s, status: s.status === "active" ? "completed" : s.status }))
+        );
+        addThoughtStep("✨ Done!");
+    }
+  };
+
+  return {
+    messages,
+    inputValue,
+    setInputValue,
+    isThinking,
+    handleSendMessage,
+    resetConversation,
+  };
 };
