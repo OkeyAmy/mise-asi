@@ -52,8 +52,8 @@ const Index = () => {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} />
       
-      <div className="flex flex-col lg:flex-row flex-1 pt-20">
-        <div className={`flex-1 w-full lg:max-w-2xl relative transition-all duration-300`}>
+      <div className="flex flex-1 pt-20 relative">
+        <div className="flex-1 w-full lg:max-w-2xl">
           <Chatbot
             plan={mealPlan}
             setPlan={setMealPlan}
@@ -63,37 +63,53 @@ const Index = () => {
             session={session}
           />
         </div>
-        {/* Collapsible right panel */}
-        <div className={`relative transition-all duration-300 ${isRightPanelOpen ? 'h-[50vh] lg:h-auto w-full lg:w-96' : 'h-0 lg:h-auto w-full lg:w-7'} border-t lg:border-t-0 lg:border-l p-0 flex flex-col items-stretch`}>
+        
+        {/* Desktop sidebar */}
+        <div className={`hidden lg:flex relative transition-all duration-300 ${isRightPanelOpen ? 'w-96' : 'w-7'} border-l flex-col`}>
           <button
             aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
             onClick={() => setIsRightPanelOpen((prev) => !prev)}
-            className={`fixed lg:absolute top-24 lg:top-4 right-4 lg:left-[-18px] z-50
-              bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300
-              hover:bg-primary/90 hover:shadow-xl
-              w-10 h-10 lg:w-8 lg:h-8 flex items-center justify-center`}
+            className="absolute top-4 left-[-18px] z-50 bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl w-8 h-8 flex items-center justify-center"
           >
             {isRightPanelOpen ? (
-              <>
-                <ChevronRight className="w-4 h-4 hidden lg:block" />
-                <ChevronDown className="w-5 h-5 lg:hidden" />
-              </>
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <>
-                <ChevronLeft className="w-4 h-4 hidden lg:block" />
-                <ChevronUp className="w-5 h-5 lg:hidden" />
-              </>
+              <ChevronLeft className="w-4 h-4" />
             )}
           </button>
-          <div
-            className={`h-full transition-all duration-300 ease-in-out
-              bg-background overflow-hidden
-              ${isRightPanelOpen ? 'opacity-100 p-4' : 'opacity-0 pointer-events-none p-0'}
-              `}
-          >
+          <div className={`h-full transition-all duration-300 ease-in-out bg-background overflow-hidden ${isRightPanelOpen ? 'opacity-100 p-4' : 'opacity-0 pointer-events-none p-0'}`}>
             {isRightPanelOpen && <ThoughtProcess steps={thoughtSteps} />}
           </div>
         </div>
+
+        {/* Mobile overlay panel */}
+        <div className={`lg:hidden fixed inset-y-0 right-0 z-40 w-80 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ top: '80px' }}>
+          <div className="h-full p-4 overflow-hidden">
+            <ThoughtProcess steps={thoughtSteps} />
+          </div>
+        </div>
+
+        {/* Mobile toggle button */}
+        <button
+          aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
+          onClick={() => setIsRightPanelOpen((prev) => !prev)}
+          className="lg:hidden fixed top-24 right-4 z-50 bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl w-10 h-10 flex items-center justify-center"
+        >
+          {isRightPanelOpen ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <ChevronLeft className="w-5 h-5" />
+          )}
+        </button>
+
+        {/* Mobile backdrop */}
+        {isRightPanelOpen && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/20 z-30"
+            style={{ top: '80px' }}
+            onClick={() => setIsRightPanelOpen(false)}
+          />
+        )}
       </div>
     </div>
   );
