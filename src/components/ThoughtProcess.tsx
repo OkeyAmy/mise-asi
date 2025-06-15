@@ -11,6 +11,22 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+/**
+ * Determines if a step is an AI-generated thought step.
+ * Here we use a heuristic: if the step has status and details, and its step text is lengthy, then treat as a "thought".
+ * If you use a different structure for system steps, you may want a more robust check.
+ */
+function isThoughtStep(step: ThoughtStep) {
+  // If details are present and the step is not a system or function label, treat as a thought
+  // We'll use the label "Thought..." for these steps
+  // You can adjust this if you distinguish thought steps differently in your state
+  return (
+    step.details !== undefined &&
+    step.step !== undefined &&
+    (step.step.length > 40 || /^[A-Z]/.test(step.step)) // heuristic: long or sentence-case
+  );
+}
+
 interface ThoughtProcessProps {
   steps: ThoughtStep[];
 }
@@ -54,7 +70,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                       step.status === 'active' && "text-primary",
                       step.status === 'pending' && "text-muted-foreground"
                     )}>
-                      {step.step}
+                      {isThoughtStep(step) ? "Thought..." : step.step}
                   </p>
                 </AccordionTrigger>
                 {step.details && (
