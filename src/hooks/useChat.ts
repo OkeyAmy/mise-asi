@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Content, FunctionCall, Part } from "@google/generative-ai";
+import { Content, Part } from "@google/generative-ai";
 import { ThoughtStep } from "@/data/schema";
-import { callGemini, callGeminiWithStreaming } from "@/lib/gemini/api";
 import { Message, UseChatProps, initialMessages } from "./chat/types";
 import { handleFunctionCall } from "./chat/functionHandlers";
 import { useChatHistory } from "./useChatHistory";
+import { callGeminiProxy } from "./geminiProxy";
 
 export const useChat = (props: UseChatProps) => {
   const {
-    apiKey,
     setThoughtSteps,
-    onApiKeyMissing,
     session,
     ...functionHandlerArgs
   } = props;
@@ -100,12 +98,6 @@ export const useChat = (props: UseChatProps) => {
     e.preventDefault();
     if (!inputValue.trim() || isThinking) return;
 
-    if (!apiKey) {
-      onApiKeyMissing();
-      toast.error("Please set your Gemini API key first.");
-      return;
-    }
-
     setThoughtSteps(prev => 
       prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))
     );
@@ -121,128 +113,69 @@ export const useChat = (props: UseChatProps) => {
     setMessages(newMessages);
     setInputValue("");
     setIsThinking(true);
+    addThoughtStep("🤔 Thinking...");
 
     const history: Content[] = newMessages.map((msg) => ({
       role: msg.sender === "bot" ? "model" : "user",
       parts: [{ text: msg.text }],
     }));
 
-    let accumulatedText = "";
-    const functionCalls: FunctionCall[] = [];
+    try {
+      const response = await callGeminiProxy(history);
 
-    await callGeminiWithStreaming(apiKey, history, {
-      onThought: (thought: string) => {
-        addThoughtStep(thought);
-      },
-      onText: (textChunk: string) => {
-        accumulatedText += textChunk;
-        setMessages((prev) => {
-          const updatedMessages = [...prev];
-          const lastMessage = updatedMessages[updatedMessages.length - 1];
+      const functionCalls = response.candidates?.[0]?.content?.parts
+        .filter((p: Part) => p.functionCall)
+        .map((p: Part) => p.functionCall) || [];
 
-          if (lastMessage && lastMessage.sender === "bot") {
-            lastMessage.text = accumulatedText;
-            return updatedMessages;
-          } else {
-            const newBotMessage: Message = {
-              id: Date.now() + 5000,
-              text: accumulatedText,
-              sender: "bot",
-            };
-            return [...updatedMessages, newBotMessage];
-          }
-        });
-      },
-      onFunctionCall: (call: FunctionCall) => {
-        functionCalls.push(call);
-        addThoughtStep(
-          `🔨 Preparing to call function: ${call.name}`,
-          JSON.stringify(call.args, null, 2),
-          "active"
+      if (functionCalls.length > 0) {
+        addThoughtStep(`🔨 Calling functions: ${functionCalls.map(c => c.name).join(', ')}`);
+        
+        const functionExecutionPromises = functionCalls.map((call: any) => 
+          handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
         );
-      },
-      onComplete: async () => {
-        setIsThinking(false);
 
-        if (functionCalls.length > 0) {
-          const functionExecutionPromises = functionCalls.map(call => 
-            handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
-          );
+        const functionResults = await Promise.all(functionExecutionPromises);
 
-          const functionResults = await Promise.all(functionExecutionPromises);
+        const modelTurnParts: Part[] = functionCalls.map((fc: any) => ({ functionCall: fc }));
+        const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
+          functionResponse: {
+            name: fc.name,
+            response: { success: true, message: functionResults[i] },
+          },
+        }));
 
-          const modelTurnParts: Part[] = functionCalls.map(fc => ({ functionCall: fc }));
-          const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
-            functionResponse: {
-              name: fc.name,
-              response: { success: true, message: functionResults[i] },
-            },
-          }));
+        const historyWithFunctionCall: Content[] = [
+          ...history,
+          { role: "model", parts: modelTurnParts },
+          { role: "user", parts: userTurnParts },
+        ];
 
-          const historyWithFunctionCall: Content[] = [
-            ...history,
-            { role: "model", parts: modelTurnParts },
-            { role: "user", parts: userTurnParts },
-          ];
+        addThoughtStep("💬 Generating final response...");
+        const finalResultResponse = await callGeminiProxy(historyWithFunctionCall);
+        
+        const finalText = finalResultResponse.candidates?.[0]?.content.parts
+            .map((p: Part) => p.text)
+            .join("") ?? "";
+        
+        const botMessage: Message = { id: Date.now() + 1, text: finalText || "I've processed that. What's next?", sender: "bot" };
+        setMessages(prev => [...prev, botMessage]);
 
-          addThoughtStep("💬 Generating final response...");
-          try {
-            const finalResultResponse = await callGemini(
-              apiKey,
-              historyWithFunctionCall
-            );
-            const finalText =
-              finalResultResponse.candidates?.[0]?.content.parts
-                .map((p) => p.text)
-                .join("") ?? "";
-
-            const messageText = finalText.trim();
-
-            if (messageText) {
-              const botMessage: Message = {
-                id: Date.now() + 1,
-                text: messageText,
-                sender: "bot",
-              };
-              setMessages((prev) => [...prev, botMessage]);
-            } else {
-              console.warn("Model did not generate a final text response after function calls.");
-              const botMessage: Message = {
-                id: Date.now() + 1,
-                text: "I've processed the information, but I'm not sure what to say next. Could you clarify your request?",
-                sender: "bot",
-              };
-              setMessages((prev) => [...prev, botMessage]);
-            }
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error
-                ? error.message
-                : "An unknown error occurred.";
-            toast.error(errorMessage);
-            addThoughtStep(`❌ Error in final response: ${errorMessage}`);
-          }
-        } else if (accumulatedText.trim() === "") {
-          const fallbackMessage: Message = {
-            id: Date.now() + 1,
-            text: "I'm not sure how to respond to that. Can you try rephrasing?",
-            sender: "bot",
-          };
-          setMessages((prev) => [...prev, fallbackMessage]);
-        }
-
-        addThoughtStep("✨ Done!");
-      },
-      onError: (error: Error) => {
-        setIsThinking(false);
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "An unknown error occurred.";
+      } else {
+        const text = response.candidates?.[0]?.content?.parts[0]?.text ?? "Sorry, I'm not sure how to respond.";
+        const botMessage: Message = { id: Date.now() + 1, text, sender: "bot" };
+        setMessages(prev => [...prev, botMessage]);
+      }
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast.error(errorMessage);
         addThoughtStep(`❌ Error: ${errorMessage}`);
-      },
-    });
+    } finally {
+        setIsThinking(false);
+        setThoughtSteps((prev) =>
+          prev.map((s) => ({ ...s, status: s.status === "active" ? "completed" : s.status }))
+        );
+        addThoughtStep("✨ Done!");
+    }
   };
 
   return {

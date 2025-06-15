@@ -3,39 +3,22 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { ThoughtStep } from "@/data/schema";
-
-interface ChatMessage {
-  id: number;
-  text: string;
-  sender: "user" | "bot";
-}
-
-interface ChatSession {
-  id: string;
-  user_id: string;
-  messages: ChatMessage[];
-  thought_steps: ThoughtStep[];
-  created_at: string;
-  updated_at: string;
-}
+import { Message } from "./chat/types";
 
 export function useChatHistory(session: Session | null) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const saveChatSession = useCallback(async (messages: ChatMessage[], thoughtSteps: ThoughtStep[]) => {
+  const saveChatSession = useCallback(async (messages: Message[], thoughtSteps: ThoughtStep[]) => {
     if (!session?.user.id) return;
     
     setIsLoading(true);
     try {
-      // The table 'chat_sessions' is not in the generated types, so we cast to any to bypass TS checks.
-      // A migration is needed to create this table in the database for this feature to work.
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("chat_sessions")
         .upsert({
           user_id: session.user.id,
-          messages,
+          messages: messages,
           thought_steps: thoughtSteps,
-          updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
       
       if (error) {
@@ -48,14 +31,14 @@ export function useChatHistory(session: Session | null) {
     }
   }, [session]);
 
-  const loadChatSession = useCallback(async (): Promise<{ messages: ChatMessage[], thoughtSteps: ThoughtStep[] } | null> => {
+  const loadChatSession = useCallback(async (): Promise<{ messages: Message[], thoughtSteps: ThoughtStep[] } | null> => {
     if (!session?.user.id) return null;
     
     setIsLoading(true);
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("chat_sessions")
-        .select("*")
+        .select("messages, thought_steps")
         .eq("user_id", session.user.id)
         .single();
       
@@ -65,11 +48,9 @@ export function useChatHistory(session: Session | null) {
       }
       
       if (data) {
-        // Since we are using 'as any', we need to cast the data to our ChatSession interface.
-        const chatSessionData = data as ChatSession;
         return {
-          messages: chatSessionData.messages || [],
-          thoughtSteps: chatSessionData.thought_steps || []
+          messages: (data.messages as Message[]) || [],
+          thoughtSteps: (data.thought_steps as ThoughtStep[]) || []
         };
       }
       
@@ -86,7 +67,7 @@ export function useChatHistory(session: Session | null) {
     if (!session?.user.id) return;
     
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("chat_sessions")
         .delete()
         .eq("user_id", session.user.id);

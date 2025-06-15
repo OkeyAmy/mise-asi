@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent } from "./ui/dialog";
 import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
-import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
 import { ChatHeader } from "./ChatHeader";
@@ -38,19 +36,6 @@ export const Chatbot = ({
   session,
   thoughtSteps,
 }: ChatbotProps) => {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
-
-  useEffect(() => {
-    let storedApiKey = localStorage.getItem("gemini_api_key");
-    if (!storedApiKey) {
-      storedApiKey = "AIzaSyB6j2kGAu88UqOhVNN8KSbUjijlXMfdovY";
-      localStorage.setItem("gemini_api_key", storedApiKey);
-      toast.info("A default API key has been configured.");
-    }
-    setApiKey(storedApiKey);
-  }, []);
-
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
   );
@@ -68,11 +53,9 @@ export const Chatbot = ({
     handleSendMessage,
     resetConversation,
   } = useChat({
-    apiKey,
     setPlan,
     setIsShoppingListOpen,
     setThoughtSteps,
-    onApiKeyMissing: () => setIsApiKeyDialogOpen(true),
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
       chatData.shoppingList.saveList(newList);
     },
@@ -128,20 +111,8 @@ export const Chatbot = ({
     thoughtSteps,
   });
 
-  const handleSaveApiKey = (key: string) => {
-    localStorage.setItem("gemini_api_key", key);
-    setApiKey(key);
-    setIsApiKeyDialogOpen(false);
-    toast.success("API Key saved successfully!");
-  };
-
   return (
     <div className="h-screen flex flex-col relative">
-      <ApiKeyDialog
-        isOpen={isApiKeyDialogOpen}
-        onClose={() => setIsApiKeyDialogOpen(false)}
-        onSave={handleSaveApiKey}
-      />
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0">
           <ChatHeader onResetConversation={resetConversation} />
