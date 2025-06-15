@@ -27,9 +27,9 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     setIsLoading(false);
   }, [session, mealPlanId]);
 
-  // Remove item from the shopping list in Supabase and update UI
-  const removeItem = async (itemName: string) => {
-    if (!session?.user.id) return;
+  // Remove multiple items from the shopping list
+  const removeItems = async (itemNames: string[]) => {
+    if (!session?.user.id || itemNames.length === 0) return;
     const { data, error } = await supabase
       .from("shopping_lists")
       .select("id, items")
@@ -38,7 +38,8 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       .maybeSingle();
 
     if (data && Array.isArray(data.items)) {
-      const filtered = (data.items as unknown as ShoppingListItem[]).filter((i: ShoppingListItem) => i.item !== itemName);
+      const lowerCaseItemNames = itemNames.map(name => name.toLowerCase());
+      const filtered = (data.items as unknown as ShoppingListItem[]).filter((i: ShoppingListItem) => !lowerCaseItemNames.includes(i.item.toLowerCase()));
       await supabase
         .from("shopping_lists")
         .update({ items: filtered as any })
@@ -46,6 +47,11 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
 
       setItems(filtered);
     }
+  };
+
+  // Remove a single item, for UI interaction
+  const removeItem = async (itemName: string) => {
+    await removeItems([itemName]);
   };
 
   // Replace the whole shopping list when a new one is generated
@@ -75,9 +81,29 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     setItems(newItems);
   };
 
+  // Add items to the shopping list, merging if they already exist
+  const addItems = async (itemsToAdd: ShoppingListItem[]) => {
+    if (!session?.user.id || itemsToAdd.length === 0) return;
+
+    const newItems = [...items];
+    itemsToAdd.forEach(itemToAdd => {
+        const existingItem = newItems.find(i => 
+            i.item.toLowerCase() === itemToAdd.item.toLowerCase() && 
+            i.unit.toLowerCase() === itemToAdd.unit.toLowerCase()
+        );
+
+        if (existingItem) {
+            existingItem.quantity += itemToAdd.quantity;
+        } else {
+            newItems.push(itemToAdd);
+        }
+    });
+    await saveList(newItems);
+  };
+
   useEffect(() => {
     fetchList();
   }, [fetchList]);
 
-  return { items, isLoading, removeItem, saveList, fetchList, setItems };
+  return { items, isLoading, removeItem, removeItems, saveList, addItems, fetchList, setItems };
 }

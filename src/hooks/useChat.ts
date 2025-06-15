@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
@@ -43,6 +42,9 @@ interface UseChatProps {
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
   onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[]) => Promise<void>;
   onGetInventory?: () => Promise<InventoryItem[]>;
+  shoppingListItems?: ShoppingListItem[];
+  onAddItemsToShoppingList?: (items: ShoppingListItem[]) => Promise<void>;
+  onRemoveItemsFromShoppingList?: (itemNames: string[]) => Promise<void>;
 }
 
 export const useChat = ({
@@ -54,6 +56,9 @@ export const useChat = ({
   onUpdateShoppingList,
   onUpdateInventory,
   onGetInventory,
+  shoppingListItems,
+  onAddItemsToShoppingList,
+  onRemoveItemsFromShoppingList,
 }: UseChatProps) => {
   const [messages, setMessages] = useState<Message[]>(getInitialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -217,6 +222,42 @@ export const useChat = ({
               funcResultMsg = "I had trouble fetching your inventory.";
             }
             addThoughtStep("✅ Executed: getInventory");
+          } else if (functionCall.name === "getShoppingList") {
+            if (shoppingListItems && shoppingListItems.length > 0) {
+              funcResultMsg = "Here is your current shopping list:\n" + shoppingListItems.map(item => `- ${item.quantity} ${item.unit} of ${item.item}`).join('\n');
+            } else {
+              funcResultMsg = "Your shopping list is currently empty.";
+            }
+            setIsShoppingListOpen(true);
+            addThoughtStep("✅ Executed: getShoppingList");
+          } else if (functionCall.name === "addToShoppingList") {
+            try {
+              const { items } = functionCall.args as { items: ShoppingListItem[] };
+              if (onAddItemsToShoppingList) {
+                await onAddItemsToShoppingList(items);
+                funcResultMsg = "I've added the items to your shopping list.";
+              } else {
+                funcResultMsg = "Shopping list function is not available right now.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble adding items to your shopping list.";
+            }
+            addThoughtStep("✅ Executed: addToShoppingList");
+          } else if (functionCall.name === "removeFromShoppingList") {
+            try {
+              const { item_names } = functionCall.args as { item_names: string[] };
+              if (onRemoveItemsFromShoppingList) {
+                await onRemoveItemsFromShoppingList(item_names);
+                funcResultMsg = "I've removed the items from your shopping list.";
+              } else {
+                funcResultMsg = "Shopping list function is not available right now.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble removing items from your shopping list.";
+            }
+            addThoughtStep("✅ Executed: removeFromShoppingList");
           }
 
           const functionResponsePart = {

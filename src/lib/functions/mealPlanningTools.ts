@@ -1,4 +1,3 @@
-
 import { SearchInventoryArgs, UpdateUserPreferencesArgs, GenerateShoppingListArgs, RecordMealFeedbackArgs } from './types';
 
 export const mealPlanningTools = [
@@ -165,6 +164,63 @@ export const mealPlanningTools = [
         },
         required: ["meal_id", "feedback"],
         additionalProperties: false
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "getShoppingList",
+      description: "Retrieves and reads out the user's current shopping list.",
+      parameters: {
+        type: "object",
+        properties: {},
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "addToShoppingList",
+      description: "Adds one or more items to the user's shopping list.",
+      parameters: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            description: "A list of items to add to the shopping list.",
+            items: {
+              type: "object",
+              properties: {
+                item: { type: "string" },
+                quantity: { type: "number" },
+                unit: { type: "string" },
+              },
+              required: ["item", "quantity", "unit"]
+            }
+          }
+        },
+        required: ["items"],
+      }
+    }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "removeFromShoppingList",
+      description: "Removes one or more items from the user's shopping list.",
+      parameters: {
+        type: "object",
+        properties: {
+          item_names: {
+            type: "array",
+            description: "A list of item names to remove from the shopping list.",
+            items: {
+              type: "string",
+            }
+          }
+        },
+        required: ["item_names"],
       }
     }
   }

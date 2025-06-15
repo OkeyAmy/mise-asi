@@ -4,18 +4,20 @@ import { mealPlanningTools } from './functions/mealPlanningTools';
 import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
 import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTools";
-import { getUserTimezone } from "./time";
+import { getUserTimezone, getFormattedUserTime } from "./time";
 
 const getSystemPrompt = () => `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
 Keep your responses concise, helpful, and encouraging.
 
-The user's current time is ${new Date().toISOString()} in the ${getUserTimezone()} timezone.
+The user's current time is ${getFormattedUserTime()}.
 Use this information to provide timely and relevant suggestions. For example, when generating a meal plan, start from today's date based on their timezone.
 
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
-If the user asks for their shopping list, you MUST use the "showShoppingList" function. After calling the function, confirm to the user that you're showing it.
+If the user wants to see their shopping list UI, you can use the "showShoppingList" function. If they want to know what's on the list, you MUST use "getShoppingList".
+If the user wants to add items, you MUST use "addToShoppingList".
+When a user says they've bought items, you MUST use "removeFromShoppingList" to remove them from the list. You should then ask if they want to add the items to their inventory and use "updateInventory" if they agree.
 
 If the user mentions items they have in their pantry, have just bought, or are listing their groceries, you MUST use the "updateInventory" function to add or update these items in their inventory. Infer the category for each item based on the available options. After calling the function, confirm to the user that their inventory has been updated.
 
@@ -91,14 +93,65 @@ const updateMealPlanTool: FunctionDeclaration = {
 
 const showShoppingListTool: FunctionDeclaration = {
     name: "showShoppingList",
-    description: "Displays the shopping list to the user based on the current meal plan.",
+    description: "Shows the shopping list UI popup to the user. To get the content of the list, use getShoppingList.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {},
     },
 };
 
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool] }];
+const getShoppingListTool: FunctionDeclaration = {
+  name: "getShoppingList",
+  description: "Retrieves and reads out the user's current shopping list.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {},
+  },
+};
+
+const addToShoppingListTool: FunctionDeclaration = {
+  name: "addToShoppingList",
+  description: "Adds one or more items to the user's shopping list.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      items: {
+        type: SchemaType.ARRAY,
+        description: "A list of items to add to the shopping list.",
+        items: {
+          type: SchemaType.OBJECT,
+          properties: {
+            item: { type: SchemaType.STRING, description: "The name of the item (e.g., 'Milk', 'Bread')." },
+            quantity: { type: SchemaType.NUMBER, description: "The quantity of the item." },
+            unit: { type: SchemaType.STRING, description: "The unit of measurement (e.g., 'gallon', 'loaf', 'piece')." },
+          },
+          required: ["item", "quantity", "unit"]
+        }
+      }
+    },
+    required: ["items"],
+  },
+};
+
+const removeFromShoppingListTool: FunctionDeclaration = {
+  name: "removeFromShoppingList",
+  description: "Removes one or more items from the user's shopping list, for example when they have been purchased.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      item_names: {
+        type: SchemaType.ARRAY,
+        description: "A list of item names to remove from the shopping list.",
+        items: {
+          type: SchemaType.STRING,
+        }
+      }
+    },
+    required: ["item_names"],
+  },
+};
+
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool, getInventoryTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {

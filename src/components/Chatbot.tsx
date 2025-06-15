@@ -57,6 +57,8 @@ export const Chatbot = ({
     items: shoppingListItems,
     isLoading: isListLoading,
     removeItem,
+    removeItems,
+    addItems,
     saveList,
   } = useShoppingList(userSession, mealPlanId);
 
@@ -77,6 +79,15 @@ export const Chatbot = ({
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
       saveList(newList);
     },
+    onAddItemsToShoppingList: async (items) => {
+      await addItems(items);
+      toast.success("I've updated your shopping list.");
+    },
+    onRemoveItemsFromShoppingList: async (itemNames) => {
+      await removeItems(itemNames);
+      toast.success("I've removed the items from your shopping list.");
+    },
+    shoppingListItems,
     onUpdateInventory: async (items) => {
       for (const item of items) {
         await upsertItem({
