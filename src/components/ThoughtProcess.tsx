@@ -2,12 +2,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { ThoughtStep } from "@/data/schema";
-import { CheckCircle, Circle, Loader2 } from "lucide-react";
+import { CheckCircle, Circle, Loader2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ThoughtProcessProps {
   steps: ThoughtStep[];
 }
+
+const formatFunctionCallDetails = (details: string) => {
+  try {
+    // Try to parse as JSON to format function call arguments
+    const parsed = JSON.parse(details);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    // If not JSON, return as is
+    return details;
+  }
+};
+
+const getFunctionCallIcon = (step: string) => {
+  if (step.includes("🔨 Preparing to call function")) {
+    return <Wrench className="h-5 w-5 text-blue-500" />;
+  }
+  return null;
+};
 
 export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
   return (
@@ -26,10 +44,10 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                 <div className="flex flex-col items-center">
                   <div className="flex-shrink-0">
                     {step.status === 'completed' && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      getFunctionCallIcon(step.step) || <CheckCircle className="h-5 w-5 text-green-500" />
                     )}
                     {step.status === 'active' && (
-                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                      getFunctionCallIcon(step.step) || <Loader2 className="h-5 w-5 text-primary animate-spin" />
                     )}
                     {step.status === 'pending' && (
                       <Circle className="h-5 w-5 text-muted-foreground" />
@@ -50,7 +68,12 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
                   </p>
                   {step.details && (
                     <div className="mt-1 text-xs text-muted-foreground">
-                      <pre className="whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm overflow-x-auto">{step.details}</pre>
+                      <pre className="whitespace-pre-wrap font-sans bg-background/50 p-2 rounded-sm overflow-x-auto border">
+                        {step.step.includes("🔨 Preparing to call function") 
+                          ? formatFunctionCallDetails(step.details)
+                          : step.details
+                        }
+                      </pre>
                     </div>
                   )}
                 </div>
