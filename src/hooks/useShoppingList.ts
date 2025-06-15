@@ -20,8 +20,8 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       .eq("meal_plan_id", mealPlanId)
       .maybeSingle();
 
-    if (data) {
-      setItems(data.items || []);
+    if (data && Array.isArray(data.items)) {
+      setItems(data.items as ShoppingListItem[]);
     } else {
       setItems([]);
     }
@@ -38,11 +38,11 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       .eq("meal_plan_id", mealPlanId)
       .maybeSingle();
 
-    if (data) {
-      const filtered = (data.items || []).filter((i: ShoppingListItem) => i.item !== itemName);
+    if (data && Array.isArray(data.items)) {
+      const filtered = (data.items as ShoppingListItem[]).filter((i: ShoppingListItem) => i.item !== itemName);
       await supabase
         .from("shopping_lists")
-        .update({ items: filtered })
+        .update({ items: filtered as any })
         .eq("id", data.id);
 
       setItems(filtered);
@@ -62,7 +62,7 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     if (data && data.id) {
       await supabase
         .from("shopping_lists")
-        .update({ items: newItems, updated_at: new Date().toISOString() })
+        .update({ items: newItems as any, updated_at: new Date().toISOString() })
         .eq("id", data.id);
     } else {
       await supabase
@@ -70,7 +70,7 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
         .insert({
           user_id: session.user.id,
           meal_plan_id: mealPlanId,
-          items: newItems,
+          items: newItems as any,
         });
     }
     setItems(newItems);

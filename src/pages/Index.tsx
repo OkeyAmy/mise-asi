@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package } from "lucide-react";
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
@@ -48,7 +48,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       <div className={`flex-1 max-w-2xl relative transition-all duration-300`}>
-        <div className="absolute top-4 right-4 z-10">
+        <div className="absolute top-4 right-4 z-10 flex gap-2">
+          <Button variant="outline" onClick={() => navigate('/inventory')}>
+            <Package className="w-4 h-4 mr-2" />
+            Inventory
+          </Button>
           <Button variant="outline" onClick={handleLogout}>
             Logout
           </Button>
@@ -88,4 +92,3 @@ const Index = () => {
 };
 
 export default Index;
-

@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Download, Share2 } from "lucide-react";
-import { useSession } from "@supabase/auth-helpers-react";
 
 interface ShoppingListProps {
   items: ShoppingListItem[];

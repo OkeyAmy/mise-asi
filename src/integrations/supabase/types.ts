@@ -122,6 +122,48 @@ export type Database = {
           },
         ]
       }
+      user_inventory: {
+        Row: {
+          category: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          item_name: string
+          location: string | null
+          notes: string | null
+          quantity: number
+          unit: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          item_name: string
+          location?: string | null
+          notes?: string | null
+          quantity?: number
+          unit?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          item_name?: string
+          location?: string | null
+          notes?: string | null
+          quantity?: number
+          unit?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string
