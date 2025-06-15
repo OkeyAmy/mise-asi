@@ -5,6 +5,7 @@ import { getUserPreferencesTool, updateUserPreferencesTool } from '../functions/
 import { getLeftoversTool, addLeftoverTool, updateLeftoverTool, removeLeftoverTool, showLeftoversTool } from "../functions/leftoverTools";
 import { showShoppingListTool, getShoppingListTool, addToShoppingListTool, removeFromShoppingListTool } from '../functions/shoppingListTools';
 import { getCurrentTimeTool } from '../functions/utilityTools';
+import { updateUserNotesTool } from './notesTools';
 
 export const tools = [{ functionDeclarations: [
     suggestMealTool,
@@ -22,4 +23,5 @@ export const tools = [{ functionDeclarations: [
     updateLeftoverTool,
     removeLeftoverTool,
     showLeftoversTool,
+    updateUserNotesTool,
 ] }];

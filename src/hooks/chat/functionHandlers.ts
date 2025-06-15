@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { MealPlan, ShoppingListItem, UserPreferences, LeftoverItem } from "@/data/schema";
 import { getFormattedUserTime } from "@/lib/time";
@@ -318,6 +317,25 @@ export const handleFunctionCall = async (
       funcResultMsg = "I had trouble updating your preferences.";
     }
     addThoughtStep("✅ Executed: updateUserPreferences");
+  } else if (functionCall.name === "updateUserNotes") {
+    try {
+      if (onUpdateUserPreferences && onGetUserPreferences) {
+        addThoughtStep("📝 Updating user notes...");
+        const { notes: newNote } = functionCall.args as { notes: string };
+        const existingPrefs = await onGetUserPreferences();
+        const existingNotes = existingPrefs?.notes || "";
+        const updatedNotes = existingNotes ? `${existingNotes}\n- ${newNote}` : `- ${newNote}`;
+        
+        await onUpdateUserPreferences({ notes: updatedNotes });
+        funcResultMsg = "I've made a note of that for you.";
+      } else {
+        funcResultMsg = "I'm sorry, I can't make notes right now.";
+      }
+    } catch (e) {
+      console.error(e);
+      funcResultMsg = "I had trouble saving that note.";
+    }
+    addThoughtStep("✅ Executed: updateUserNotes");
   }
   return funcResultMsg;
 };
