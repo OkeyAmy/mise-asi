@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -6,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, Message } from "@/data/schema";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
-import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { ResetConversationButton } from "./ResetConversationButton";
@@ -123,7 +121,6 @@ export const Chatbot = ({
     <div className="h-screen flex flex-col relative">
       {/* Chat content */}
       <div className="flex-1 flex flex-col">
-        <ChatHeader onResetConversation={resetConversation} />
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
