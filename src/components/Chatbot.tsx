@@ -9,6 +9,7 @@ import { useChat } from "@/hooks/useChat";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
+import { ResetConversationButton } from "./ResetConversationButton";
 import { Session } from "@supabase/supabase-js";
 import { useChatData } from "@/hooks/useChatData";
 import { LeftoversDialog } from "./LeftoversDialog";
@@ -115,6 +116,10 @@ export const Chatbot = ({
 
   return (
     <div className="h-screen flex flex-col relative">
+      {/* Reset button, moved and fixed to top left inside chat panel */}
+      <div className="absolute top-4 left-4 z-20">
+        <ResetConversationButton onReset={resetConversation} />
+      </div>
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
           <ChatHeader onResetConversation={resetConversation} />
