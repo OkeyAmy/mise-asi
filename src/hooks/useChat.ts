@@ -1,34 +1,82 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
 import { ThoughtStep } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini/api";
-import { Message, UseChatProps, getInitialMessages, initialMessages } from "./chat/types";
+import { Message, UseChatProps, initialMessages } from "./chat/types";
 import { handleFunctionCall } from "./chat/functionHandlers";
+import { useChatHistory } from "./useChatHistory";
 
 export const useChat = (props: UseChatProps) => {
   const {
     apiKey,
     setThoughtSteps,
     onApiKeyMissing,
+    session,
     ...functionHandlerArgs
   } = props;
-  const [messages, setMessages] = useState<Message[]>(getInitialMessages);
+  
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
+  const { saveChatSession, loadChatSession, clearChatSession } = useChatHistory(session);
+
+  // Load chat history when user session is available
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("chat_history", JSON.stringify(messages));
-    }
-  }, [messages]);
+    const loadHistory = async () => {
+      if (session?.user && !isInitialized) {
+        const savedSession = await loadChatSession();
+        if (savedSession) {
+          setMessages(savedSession.messages);
+          setThoughtSteps(savedSession.thoughtSteps);
+        } else {
+          // If no saved session, try to load from localStorage as fallback
+          try {
+            const stored = localStorage.getItem("chat_history");
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setMessages(parsed);
+              }
+            }
+          } catch (e) {
+            console.error("Could not parse chat history from local storage", e);
+          }
+        }
+        setIsInitialized(true);
+      }
+    };
 
-  const resetConversation = () => {
+    loadHistory();
+  }, [session, loadChatSession, isInitialized, setThoughtSteps]);
+
+  // Save to database whenever messages or thought steps change
+  useEffect(() => {
+    if (session?.user && isInitialized && messages.length > 0) {
+      // Debounce the save operation
+      const timeoutId = setTimeout(() => {
+        const currentThoughtSteps = props.thoughtSteps || [];
+        saveChatSession(messages, currentThoughtSteps);
+        // Also save to localStorage as backup
+        localStorage.setItem("chat_history", JSON.stringify(messages));
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, session, isInitialized, saveChatSession, props.thoughtSteps]);
+
+  const resetConversation = async () => {
     setMessages(initialMessages);
     setInputValue("");
     setIsThinking(false);
     setThoughtSteps([]);
+    
+    // Clear from database
+    await clearChatSession();
+    
+    // Clear from localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem("chat_history", JSON.stringify(initialMessages));
     }

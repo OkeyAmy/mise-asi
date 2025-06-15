@@ -1,6 +1,7 @@
 
 import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem } from "@/data/schema";
 import { InventoryItem } from "@/hooks/useInventory";
+import { Session } from "@supabase/supabase-js";
 
 export interface Message {
   id: number;
@@ -28,6 +29,9 @@ export interface UseChatProps {
   onAddLeftover: (item: Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'date_created'> & { date_created?: string }) => Promise<void>;
   onUpdateLeftover: (id: string, updates: Partial<{ servings: number; notes: string }>) => Promise<void>;
   onRemoveLeftover: (id: string) => Promise<void>;
+  // Session and thought steps for persistence
+  session?: Session | null;
+  thoughtSteps?: ThoughtStep[];
 }
 
 export const initialMessages: Message[] = [
@@ -38,16 +42,4 @@ export const initialMessages: Message[] = [
   },
 ];
 
-export const getInitialMessages = (): Message[] => {
-  if (typeof window === 'undefined') return initialMessages;
-  try {
-    const stored = localStorage.getItem("chat_history");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.error("Could not parse chat history from local storage", e);
-  }
-  return initialMessages;
-}
+// Remove the getInitialMessages function as we'll handle this in the hook now

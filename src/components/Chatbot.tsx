@@ -26,6 +26,7 @@ interface ChatbotProps {
   setIsLeftoversOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   session?: Session | null;
+  thoughtSteps: ThoughtStep[];
 }
 
 export const Chatbot = ({
@@ -37,6 +38,7 @@ export const Chatbot = ({
   setIsLeftoversOpen,
   setThoughtSteps,
   session,
+  thoughtSteps,
 }: ChatbotProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
@@ -154,6 +156,9 @@ export const Chatbot = ({
     onRemoveLeftover: async (id) => {
       await removeLeftover(id);
     },
+    // Pass session and thought steps for persistence
+    session: userSession,
+    thoughtSteps,
   });
 
   const handleSaveApiKey = (key: string) => {

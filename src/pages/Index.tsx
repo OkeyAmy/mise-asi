@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -64,6 +63,7 @@ const Index = () => {
             setIsLeftoversOpen={setIsLeftoversOpen}
             setThoughtSteps={setThoughtSteps}
             session={session}
+            thoughtSteps={thoughtSteps}
           />
         </div>
         
