@@ -14,6 +14,7 @@ import { Session } from "@supabase/supabase-js";
 import { useChatData } from "@/hooks/useChatData";
 import { LeftoversDialog } from "./LeftoversDialog";
 import { supabase } from "@/integrations/supabase/client";
+import React from "react";
 
 interface ChatbotProps {
   plan: MealPlan;
@@ -72,17 +73,26 @@ export const Chatbot = ({
     },
     shoppingListItems: chatData.shoppingList.items,
     onUpdateInventory: async (items) => {
+      // Add logging for troubleshooting inventory not updating
+      console.log("onUpdateInventory called with:", items);
       for (const item of items) {
-        await chatData.inventory.upsertItem({
-          ...item,
-          location: item.location || 'pantry',
-          notes: item.notes || 'Added by AI',
-        });
+        try {
+          const result = await chatData.inventory.upsertItem({
+            ...item,
+            location: item.location || 'pantry',
+            notes: item.notes || 'Added by AI',
+          });
+          console.log("Inventory upsert result:", result);
+        } catch (e) {
+          console.error("Inventory upsert failed for item:", item, e);
+        }
       }
       toast.success("Your inventory has been updated.");
     },
     onGetInventory: async () => {
-      return chatData.inventory.items;
+      const items = chatData.inventory.items;
+      console.log("onGetInventory, items:", items);
+      return items;
     },
     onGetUserPreferences: async () => {
       return chatData.preferences.data;
@@ -90,13 +100,9 @@ export const Chatbot = ({
     onUpdateUserPreferences: async (updates) => {
       await chatData.preferences.update(updates as Partial<UserPreferences>);
     },
-    // Leftovers props
     setIsLeftoversOpen,
     onGetLeftovers: async () => {
       await chatData.leftovers.get(); // Refreshes the list
-      // After fetching, we need to return the fresh data.
-      // The `leftoverItems` state might not be updated yet.
-      // A direct fetch and return is more reliable here.
       const { data } = await supabase.from('user_leftovers').select('*').order('date_created', { ascending: false });
       return data || [];
     },
@@ -109,32 +115,37 @@ export const Chatbot = ({
     onRemoveLeftover: async (id) => {
       await chatData.leftovers.remove(id);
     },
-    // Pass session and thought steps for persistence
     session: userSession,
     thoughtSteps,
   });
 
   return (
     <div className="h-screen flex flex-col relative">
-      {/* Reset button, moved and fixed to top left inside chat panel */}
-      <div className="absolute top-4 left-4 z-20">
-        <ResetConversationButton onReset={resetConversation} />
-      </div>
-      <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
+      {/* Chat content */}
+      <div className="flex-1 flex flex-col">
+        <ChatHeader onResetConversation={resetConversation} />
         <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
-          <ChatHeader onResetConversation={resetConversation} />
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border rounded-t-2xl">
-            <ChatInput
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              handleSendMessage={handleSendMessage}
-              isThinking={isThinking}
-            />
+          {/* Chat input panel with the reset icon to the left */}
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border rounded-t-2xl flex items-center">
+            <div className="pl-2 pr-1">
+              <ResetConversationButton onReset={resetConversation} iconOnly />
+            </div>
+            <div className="flex-1">
+              <ChatInput
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                handleSendMessage={handleSendMessage}
+                isThinking={isThinking}
+              />
+            </div>
           </div>
         </Card>
+      </div>
+      {/* Dialog: Shopping List */}
+      <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="sr-only">Shopping List</DialogTitle>
@@ -149,6 +160,7 @@ export const Chatbot = ({
           />
         </DialogContent>
       </Dialog>
+      {/* Dialog: Leftovers */}
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
         <DialogContent className="max-w-md rounded-2xl">
             <DialogHeader>

@@ -6,24 +6,35 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
 
 interface ResetConversationButtonProps {
   onReset: () => void;
+  iconOnly?: boolean;
+  className?: string;
 }
 
-export const ResetConversationButton = ({ onReset }: ResetConversationButtonProps) => {
+export const ResetConversationButton = ({
+  onReset,
+  iconOnly = false,
+  className = "",
+}: ResetConversationButtonProps) => {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <RotateCcw className="h-4 w-4" />
-          Reset Chat
+        <Button
+          variant="outline"
+          size="icon"
+          className={className + " p-0 rounded-full aspect-square"}
+          aria-label="Reset chat"
+        >
+          <RotateCcw className="h-5 w-5" />
+          {!iconOnly && <span className="ml-1">Reset Chat</span>}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
