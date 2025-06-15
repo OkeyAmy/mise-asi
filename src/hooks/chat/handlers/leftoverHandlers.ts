@@ -9,6 +9,7 @@ export const handleLeftoverFunctions = async (
 ): Promise<string> => {
   const { addThoughtStep, setIsLeftoversOpen, onGetLeftovers, onAddLeftover, onUpdateLeftover, onRemoveLeftover } = args;
   let funcResultMsg = "";
+  const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
 
   if (functionCall.name === "showLeftovers") {
     setIsLeftoversOpen(true);
@@ -39,10 +40,21 @@ export const handleLeftoverFunctions = async (
     addThoughtStep("✅ Executed: getLeftovers");
   } else if (functionCall.name === "addLeftover") {
     try {
-      const leftoverData = functionCall.args as Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'date_created'> & { date_created?: string };
-      if (onAddLeftover) {
-        await onAddLeftover(leftoverData);
-        funcResultMsg = `I've added ${leftoverData.meal_name} to your leftovers.`;
+      const leftoverData = functionCall.args as Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'date_created'> & { servings: number, date_created?: string };
+      if (onAddLeftover && onGetLeftovers && onUpdateLeftover) {
+        const newLeftoverNameNormalized = normalize(leftoverData.meal_name);
+
+        const allLeftovers = await onGetLeftovers();
+        const existingLeftover = allLeftovers.find(l => normalize(l.meal_name) === newLeftoverNameNormalized);
+
+        if (existingLeftover) {
+            const newServings = existingLeftover.servings + leftoverData.servings;
+            await onUpdateLeftover(existingLeftover.id, { servings: newServings });
+            funcResultMsg = `I've updated your ${existingLeftover.meal_name} leftovers. You now have ${newServings} serving${newServings !== 1 ? 's' : ''}.`;
+        } else {
+            await onAddLeftover(leftoverData);
+            funcResultMsg = `I've added ${leftoverData.meal_name} to your leftovers.`;
+        }
       } else {
         funcResultMsg = "Leftovers function is not available right now.";
       }
@@ -60,7 +72,8 @@ export const handleLeftoverFunctions = async (
       } else {
         // Get current leftovers to find the item
         const leftovers = await onGetLeftovers();
-        const itemToAdjust = leftovers.find(item => item.meal_name.toLowerCase() === meal_name.toLowerCase());
+        const mealNameNormalized = normalize(meal_name);
+        const itemToAdjust = leftovers.find(item => normalize(item.meal_name) === mealNameNormalized);
         
         if (itemToAdjust) {
           const newServings = itemToAdjust.servings + serving_adjustment;
@@ -113,7 +126,8 @@ export const handleLeftoverFunctions = async (
           funcResultMsg = "I've removed the leftover.";
       } else if (meal_name) {
           const leftovers = await onGetLeftovers();
-          const itemToRemove = leftovers.find(item => item.meal_name.toLowerCase() === meal_name.toLowerCase());
+          const mealNameNormalized = normalize(meal_name);
+          const itemToRemove = leftovers.find(item => normalize(item.meal_name) === mealNameNormalized);
           
           if (itemToRemove) {
               await onRemoveLeftover(itemToRemove.id);

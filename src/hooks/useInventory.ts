@@ -105,11 +105,11 @@ export function useInventory(session: Session | null, onRestockRecommendation?: 
   const upsertItem = async (item: Partial<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & { item_name: string }) => {
     if (!session?.user.id) return;
     
-    // Normalize the item name for consistent matching
-    const normalizedItemName = item.item_name.toLowerCase().trim();
+    const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
+    const normalizedNewItemName = normalize(item.item_name);
     
-    // Find existing item by normalized name (case-insensitive)
-    const existingItem = items.find(i => i.item_name.toLowerCase().trim() === normalizedItemName);
+    // Find existing item by normalized name (case-insensitive and handles simple plurals)
+    const existingItem = items.find(i => normalize(i.item_name) === normalizedNewItemName);
     
     // If quantity is 0 or below, delete the item instead of upserting
     if (item.quantity !== undefined && item.quantity <= 0) {

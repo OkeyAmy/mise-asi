@@ -149,15 +149,24 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     
     const currentItems = (currentList?.items as unknown as ShoppingListItem[]) || [];
     const newItems = [...currentItems];
+    const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
 
     itemsToAdd.forEach(itemToAdd => {
-        const existingItem = newItems.find(i => 
-            i.item.toLowerCase() === itemToAdd.item.toLowerCase() && 
-            i.unit.toLowerCase() === itemToAdd.unit.toLowerCase()
+        const newItemNameNormalized = normalize(itemToAdd.item);
+        const existingItemIndex = newItems.findIndex(i => 
+            normalize(i.item) === newItemNameNormalized
         );
 
-        if (existingItem) {
-            existingItem.quantity += itemToAdd.quantity;
+        if (existingItemIndex > -1) {
+            const existingItem = newItems[existingItemIndex];
+            // If units are the same, we add quantities. This is a simple "add more" case.
+            if (existingItem.unit.toLowerCase() === itemToAdd.unit.toLowerCase()) {
+                existingItem.quantity += itemToAdd.quantity;
+            } else {
+                // If units are different, we assume it's a correction/update and replace the item.
+                // This handles cases like "2 yams (piece)" replacing "1 yam (medium)".
+                newItems[existingItemIndex] = itemToAdd;
+            }
         } else {
             newItems.push(itemToAdd);
         }
