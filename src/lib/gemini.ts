@@ -7,6 +7,7 @@ import { updateInventoryTool, getInventoryTool } from "./functions/inventoryTool
 import { getUserTimezone, getFormattedUserTime } from "./time";
 import { getUserPreferencesTool, updateUserPreferencesTool } from './functions/preferenceTools';
 import { suggestMealTool } from './functions/mealSuggestionTools';
+import { MealSchema } from "./schemas/mealSchema";
 
 const getSystemPrompt = () => `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users eat healthy by providing single, timely meal suggestions. You do not create full 7-day meal plans.
@@ -25,36 +26,6 @@ Your process for each user request should be:
 
 Keep your responses concise, helpful, and encouraging. Do not mention you are an AI model.
 `;
-
-const MealSchema: ObjectSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    name: { type: SchemaType.STRING, description: "The name of the meal." },
-    calories: { type: SchemaType.NUMBER, description: "Estimated calories for the meal." },
-    macros: {
-      type: SchemaType.OBJECT,
-      properties: {
-        protein: { type: SchemaType.NUMBER, description: "Protein in grams." },
-        carbs: { type: SchemaType.NUMBER, description: "Carbohydrates in grams." },
-        fat: { type: SchemaType.NUMBER, description: "Fat in grams." }
-      },
-      required: ["protein", "carbs", "fat"]
-    },
-    ingredients: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          item: { type: SchemaType.STRING },
-          quantity: { type: SchemaType.NUMBER },
-          unit: { type: SchemaType.STRING }
-        },
-        required: ["item", "quantity", "unit"]
-      }
-    }
-  },
-  required: ["name", "calories", "macros", "ingredients"]
-};
 
 const updateMealPlanTool: FunctionDeclaration = {
     name: "updateMealPlan",
@@ -356,23 +327,8 @@ export async function callGeminiWithStreaming(
     await handlers.onComplete();
 
   } catch (error) {
-    console.error("Detailed Gemini API error:", error);
-    
-    // Check if this is a quota/billing error and fallback to Groq
-    if (error instanceof Error && 
-        (error.message.includes('429') || 
-         error.message.includes('quota') || 
-         error.message.includes('billing') ||
-         error.message.includes('free quota tier'))) {
-      console.log("Gemini quota exceeded, falling back to Groq...");
-      handlers.onThought("Gemini quota exceeded, switching to Groq fallback...");
-      await callGroqWithStreaming(contents, handlers);
-    } else {
-      if (error instanceof Error) {
-        handlers.onError(new Error(`Gemini API Error: ${error.message}`));
-      } else {
-        handlers.onError(new Error("An unexpected error occurred while connecting to Gemini AI. Please try again."));
-      }
-    }
+    console.error("Detailed Gemini API error, falling back to Groq:", error);
+    handlers.onThought("Gemini not responding, switching to Groq fallback...");
+    await callGroqWithStreaming(contents, handlers);
   }
 }
