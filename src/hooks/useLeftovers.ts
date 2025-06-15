@@ -16,6 +16,7 @@ export const useLeftovers = (session: Session | null) => {
             const { data, error } = await supabase
                 .from('user_leftovers')
                 .select('*')
+                .eq('user_id', session.user.id)
                 .order('date_created', { ascending: false });
 
             if (error) throw error;
