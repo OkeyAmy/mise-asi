@@ -11,9 +11,6 @@ Keep your responses concise, helpful, and encouraging.
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
 If the user asks for their shopping list, you MUST use the "showShoppingList" function. After calling the function, confirm to the user that you're showing it.
-
-If the user talks about their inventory (e.g., "I have some chicken and rice", "I just used up all the milk"), you MUST use the "updateInventory" function to add or remove items.
-
 If the user talks about their goals, confirm that their goals have been noted and that the meal plan will be updated (use the function!).
 If the user talks about their pantry, acknowledge the new ingredients and consider them for the next meal plan generation.
 For any other topic, provide a helpful response or admit if you can't help with a specific request.
@@ -93,27 +90,7 @@ const showShoppingListTool: FunctionDeclaration = {
     },
 };
 
-const updateInventoryTool: FunctionDeclaration = {
-    name: "updateInventory",
-    description: "Updates the user's pantry/inventory by adding or removing items.",
-    parameters: {
-      type: SchemaType.OBJECT,
-      properties: {
-        add: {
-          type: SchemaType.ARRAY,
-          description: "A list of food items to add to the inventory. Use this when the user says they have new ingredients.",
-          items: { type: SchemaType.STRING }
-        },
-        remove: {
-          type: SchemaType.ARRAY,
-          description: "A list of food items to remove from the inventory. Use this when a user says they've used up ingredients.",
-          items: { type: SchemaType.STRING }
-        }
-      },
-    },
-};
-
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool] }];
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
