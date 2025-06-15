@@ -85,7 +85,23 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
   const addItems = async (itemsToAdd: ShoppingListItem[]) => {
     if (!session?.user.id || itemsToAdd.length === 0) return;
 
-    const newItems = [...items];
+    // First, fetch the most up-to-date list from the database to avoid stale state issues.
+    const { data: currentList, error: fetchError } = await supabase
+      .from("shopping_lists")
+      .select("id, items")
+      .eq("user_id", session.user.id)
+      .eq("meal_plan_id", mealPlanId)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error("Error fetching shopping list before adding items:", fetchError);
+      // Optionally, you could show a toast to the user here.
+      return;
+    }
+    
+    const currentItems = (currentList?.items as unknown as ShoppingListItem[]) || [];
+    const newItems = [...currentItems];
+
     itemsToAdd.forEach(itemToAdd => {
         const existingItem = newItems.find(i => 
             i.item.toLowerCase() === itemToAdd.item.toLowerCase() && 
@@ -98,6 +114,8 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
             newItems.push(itemToAdd);
         }
     });
+
+    // `saveList` will handle both updating the DB and setting the local state.
     await saveList(newItems);
   };
 
