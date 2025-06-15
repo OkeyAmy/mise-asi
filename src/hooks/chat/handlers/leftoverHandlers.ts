@@ -70,12 +70,25 @@ export const handleLeftoverFunctions = async (
     addThoughtStep("✅ Executed: updateLeftover");
   } else if (functionCall.name === "removeLeftover") {
     try {
-      const { leftover_id } = functionCall.args as { leftover_id: string };
-      if (onRemoveLeftover) {
-        await onRemoveLeftover(leftover_id);
-        funcResultMsg = "I've removed the leftover.";
+      const { leftover_id, meal_name } = functionCall.args as { leftover_id?: string; meal_name?: string };
+
+      if (!onRemoveLeftover || !onGetLeftovers) {
+          funcResultMsg = "Leftovers function is not available right now.";
+      } else if (leftover_id) {
+          await onRemoveLeftover(leftover_id);
+          funcResultMsg = "I've removed the leftover.";
+      } else if (meal_name) {
+          const leftovers = await onGetLeftovers();
+          const itemToRemove = leftovers.find(item => item.meal_name.toLowerCase() === meal_name.toLowerCase());
+          
+          if (itemToRemove) {
+              await onRemoveLeftover(itemToRemove.id);
+              funcResultMsg = `I've removed '${meal_name}' from your leftovers.`;
+          } else {
+              funcResultMsg = `I couldn't find a leftover item named '${meal_name}'.`;
+          }
       } else {
-        funcResultMsg = "Leftovers function is not available right now.";
+          funcResultMsg = "You need to tell me which leftover to remove, either by name or ID.";
       }
     } catch (e) {
       console.error(e);

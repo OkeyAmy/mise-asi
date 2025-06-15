@@ -37,13 +37,13 @@ export const updateLeftoverTool: FunctionDeclaration = {
 
 export const removeLeftoverTool: FunctionDeclaration = {
   name: "removeLeftover",
-  description: "Removes a meal from the user's leftovers list, e.g., after it has been eaten.",
+  description: "Removes a meal from the user's leftovers list, e.g., after it has been eaten. You must provide EITHER the meal_name OR the leftover_id.",
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
-      leftover_id: { type: SchemaType.STRING, description: "The ID of the leftover item to remove." },
+      leftover_id: { type: SchemaType.STRING, description: "The ID of the leftover item to remove. Use this if you know the exact ID." },
+      meal_name: { type: SchemaType.STRING, description: "The name of the leftover meal to remove (e.g., 'Spaghetti Bolognese'). Use this for removal by name." },
     },
-    required: ["leftover_id"],
   },
 };
 
