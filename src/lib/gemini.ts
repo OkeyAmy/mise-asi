@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { mealPlanningTools } from './functions/mealPlanningTools';
 import { executeMealPlanningFunction } from './functions/executeFunctions';
 import { FunctionCallResult } from './functions/types';
+import { updateInventoryTool } from './functions/inventoryTools';
 
 const SYSTEM_PROMPT = `You are NutriMate, a friendly and helpful AI assistant for a meal planning application.
 Your goal is to help users with their meal plans, nutrition goals, and pantry management.
@@ -11,6 +12,9 @@ Keep your responses concise, helpful, and encouraging.
 When a user asks for a new meal plan, or to modify the existing one based on new preferences, goals, or pantry items, you MUST use the "updateMealPlan" function to generate and apply a completely new 7-day meal plan. You should infer the user's preferences from the conversation. After calling the function, confirm to the user that the plan has been updated.
 
 If the user asks for their shopping list, you MUST use the "showShoppingList" function. After calling the function, confirm to the user that you're showing it.
+
+When a user mentions they have certain ingredients or items at home, you MUST use the "updateInventory" function to add those items to their inventory. This helps with meal planning and shopping list generation.
+
 If the user talks about their goals, confirm that their goals have been noted and that the meal plan will be updated (use the function!).
 If the user talks about their pantry, acknowledge the new ingredients and consider them for the next meal plan generation.
 For any other topic, provide a helpful response or admit if you can't help with a specific request.
@@ -90,7 +94,7 @@ const showShoppingListTool: FunctionDeclaration = {
     },
 };
 
-const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool] }];
+const tools = [{ functionDeclarations: [updateMealPlanTool, showShoppingListTool, updateInventoryTool] }];
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
