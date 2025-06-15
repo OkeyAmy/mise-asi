@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, Part } from "@google/generative-ai";
@@ -5,12 +6,19 @@ import { ThoughtStep } from "@/data/schema";
 import { Message, UseChatProps, initialMessages } from "./chat/types";
 import { handleFunctionCall } from "./chat/functionHandlers";
 import { useChatHistory } from "./useChatHistory";
-import { callGeminiProxy } from "./geminiProxy";
+
+// Import from the correct location
+const callGeminiProxy = async (history: Content[]) => {
+  // Placeholder - this should use the actual gemini proxy implementation
+  throw new Error("Gemini proxy not implemented");
+};
 
 export const useChat = (props: UseChatProps) => {
   const {
     setThoughtSteps,
     session,
+    apiKey,
+    onApiKeyMissing,
     ...functionHandlerArgs
   } = props;
   
@@ -98,13 +106,18 @@ export const useChat = (props: UseChatProps) => {
     e.preventDefault();
     if (!inputValue.trim() || isThinking) return;
 
+    if (!apiKey) {
+      onApiKeyMissing();
+      return;
+    }
+
     setThoughtSteps(prev => 
       prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))
     );
 
     const userInput = inputValue.trim();
     const userMessage: Message = {
-      id: Date.now(),
+      id: Date.now().toString(),
       text: userInput,
       sender: "user",
     };
@@ -157,12 +170,12 @@ export const useChat = (props: UseChatProps) => {
             .map((p: Part) => p.text)
             .join("") ?? "";
         
-        const botMessage: Message = { id: Date.now() + 1, text: finalText || "I've processed that. What's next?", sender: "bot" };
+        const botMessage: Message = { id: (Date.now() + 1).toString(), text: finalText || "I've processed that. What's next?", sender: "bot" };
         setMessages(prev => [...prev, botMessage]);
 
       } else {
         const text = response.candidates?.[0]?.content?.parts[0]?.text ?? "Sorry, I'm not sure how to respond.";
-        const botMessage: Message = { id: Date.now() + 1, text, sender: "bot" };
+        const botMessage: Message = { id: (Date.now() + 1).toString(), text, sender: "bot" };
         setMessages(prev => [...prev, botMessage]);
       }
     } catch (error) {

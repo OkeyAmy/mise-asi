@@ -33,7 +33,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 24.6 95% 53.1%; /* Neon Orange */
 
-    --radius: 0.5rem;
+    --radius: 1rem; /* Increased for more curved edges */
   }
 
   .dark {
@@ -56,7 +56,7 @@
     --border: 12 6.5% 15.1%;
     --input: 12 6.5% 15.1%;
     --ring: 24.6 95% 53.1%; /* Neon Orange */
-    --radius: 0.5rem;
+    --radius: 1rem; /* Increased for more curved edges */
   }
 }
 
@@ -66,5 +66,21 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Apply curved edges to common UI components */
+@layer components {
+  .rounded-default {
+    border-radius: var(--radius);
+  }
+  
+  /* Override default button, input, and card styles with more curved edges */
+  button, input, textarea, select {
+    border-radius: var(--radius);
+  }
+  
+  .card, [data-radix-dialog-content], [data-radix-popover-content] {
+    border-radius: var(--radius);
   }
 }

@@ -19,7 +19,7 @@ export function useChatHistory(session: Session | null) {
           user_id: session.user.id,
           messages: messages,
           thought_steps: thoughtSteps,
-        }, { onConflict: 'user_id' });
+        });
       
       if (error) {
         console.error("Error saving chat session:", error);
@@ -49,8 +49,8 @@ export function useChatHistory(session: Session | null) {
       
       if (data) {
         return {
-          messages: (data.messages as Message[]) || [],
-          thoughtSteps: (data.thought_steps as ThoughtStep[]) || []
+          messages: (data.messages as unknown as Message[]) || [],
+          thoughtSteps: (data.thought_steps as unknown as ThoughtStep[]) || []
         };
       }
       

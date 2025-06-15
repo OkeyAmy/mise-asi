@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -39,9 +40,17 @@ export const Chatbot = ({
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
   );
+  const [apiKey, setApiKey] = useState<string | null>(null);
+
   useEffect(() => {
     if (session) setUserSession(session);
   }, [session]);
+
+  useEffect(() => {
+    // Get API key from environment or localStorage
+    const key = import.meta.env.VITE_GOOGLE_AI_API_KEY || localStorage.getItem('google_ai_api_key');
+    setApiKey(key);
+  }, []);
 
   const chatData = useChatData(userSession, plan.plan_id);
 
@@ -53,9 +62,13 @@ export const Chatbot = ({
     handleSendMessage,
     resetConversation,
   } = useChat({
+    apiKey,
     setPlan,
     setIsShoppingListOpen,
     setThoughtSteps,
+    onApiKeyMissing: () => {
+      toast.error("API key is missing. Please set your Google AI API key.");
+    },
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
       chatData.shoppingList.saveList(newList);
     },
@@ -114,12 +127,12 @@ export const Chatbot = ({
   return (
     <div className="h-screen flex flex-col relative">
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
-        <Card className="flex flex-col h-full shadow-none border-0">
+        <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
           <ChatHeader onResetConversation={resetConversation} />
           <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border">
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border rounded-t-2xl">
             <ChatInput
               inputValue={inputValue}
               setInputValue={setInputValue}
@@ -128,7 +141,7 @@ export const Chatbot = ({
             />
           </div>
         </Card>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
           <ShoppingList
             items={chatData.shoppingList.items}
             isLoading={chatData.shoppingList.isLoading}
@@ -137,7 +150,7 @@ export const Chatbot = ({
         </DialogContent>
       </Dialog>
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-2xl">
             <LeftoversDialog 
                 items={chatData.leftovers.items}
                 isLoading={chatData.leftovers.isLoading}
