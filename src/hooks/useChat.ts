@@ -1,9 +1,9 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
 import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
 import { callGemini, callGeminiWithStreaming } from "@/lib/gemini";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: number;
@@ -26,7 +26,6 @@ interface UseChatProps {
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   onApiKeyMissing: () => void;
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
-  session?: any; // Add session to handle inventory updates
 }
 
 export const useChat = ({
@@ -36,7 +35,6 @@ export const useChat = ({
   setThoughtSteps,
   onApiKeyMissing,
   onUpdateShoppingList,
-  session,
 }: UseChatProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
@@ -159,35 +157,6 @@ export const useChat = ({
             }
             setIsShoppingListOpen(true);
             addThoughtStep("✅ Executed: showShoppingList");
-          } else if (functionCall.name === "updateInventory" && session?.user?.id) {
-            // Handle inventory updates
-            try {
-              const inventoryData = functionCall.args as { items: any[] };
-              const itemsToAdd = inventoryData.items;
-              
-              for (const item of itemsToAdd) {
-                await supabase
-                  .from("user_inventory")
-                  .upsert({
-                    user_id: session.user.id,
-                    item_name: item.item_name,
-                    category: item.category,
-                    quantity: item.quantity,
-                    unit: item.unit,
-                    location: item.location || 'pantry',
-                    notes: item.notes || ''
-                  }, {
-                    onConflict: 'user_id,item_name'
-                  });
-              }
-              
-              funcResultMsg = `Added ${itemsToAdd.length} item(s) to your inventory.`;
-              toast.success("Inventory updated successfully!");
-              addThoughtStep("✅ Executed: updateInventory");
-            } catch (error) {
-              funcResultMsg = "Failed to update inventory.";
-              addThoughtStep(`❌ Error updating inventory: ${error}`);
-            }
           }
 
           const functionResponsePart = {

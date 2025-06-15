@@ -79,7 +79,6 @@ export const Chatbot = ({
       // Overwrite DB and UI version of shopping list whenever AI asks to refresh
       saveList(newList);
     },
-    session: userSession, // Pass the session to enable inventory updates
   });
 
   const handleSaveApiKey = (key: string) => {
