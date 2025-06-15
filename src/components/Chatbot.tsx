@@ -121,13 +121,13 @@ export const Chatbot = ({
   return (
     <div className="h-full flex flex-col relative">
       {/* Chat content */}
-      <div className="flex-1 flex flex-col">
-        <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl">
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
+      <div className="flex-1 flex flex-col min-h-0">
+        <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl overflow-hidden">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>
-          {/* Chat input panel with the reset icon to the left */}
-          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border rounded-t-2xl flex items-center">
+          {/* Chat input panel is now a flex item, constrained to the Card width */}
+          <div className="bg-background border-t border-border rounded-t-2xl flex items-center">
             <div className="pl-2 pr-1">
               <ResetConversationButton onReset={resetConversation} iconOnly />
             </div>
