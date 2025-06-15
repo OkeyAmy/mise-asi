@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
-import { Dialog, DialogContent } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, Message } from "@/data/schema";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
@@ -131,6 +131,12 @@ export const Chatbot = ({
           </div>
         </Card>
         <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Shopping List</DialogTitle>
+            <DialogDescription className="sr-only">
+              A dialog showing your current shopping list.
+            </DialogDescription>
+          </DialogHeader>
           <ShoppingList
             items={chatData.shoppingList.items}
             isLoading={chatData.shoppingList.isLoading}
@@ -140,6 +146,12 @@ export const Chatbot = ({
       </Dialog>
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
         <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader>
+              <DialogTitle className="sr-only">Leftovers</DialogTitle>
+              <DialogDescription className="sr-only">
+                A dialog to view and manage your leftovers.
+              </DialogDescription>
+            </DialogHeader>
             <LeftoversDialog 
                 items={chatData.leftovers.items}
                 isLoading={chatData.leftovers.isLoading}
