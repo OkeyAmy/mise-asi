@@ -1,20 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
 import { Dialog, DialogContent } from "./ui/dialog";
-import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences, LeftoverItem } from "@/data/schema";
+import { MealPlan, ShoppingListItem, ThoughtStep, UserPreferences } from "@/data/schema";
 import { ApiKeyDialog } from "./ApiKeyDialog";
 import { toast } from "sonner";
 import { useChat } from "@/hooks/useChat";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
-import { useShoppingList } from "@/hooks/useShoppingList";
-import { useInventory } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import { usePreferences } from "@/hooks/usePreferences";
-import { useLeftovers } from "@/hooks/useLeftovers";
+import { useChatData } from "@/hooks/useChatData";
 import { LeftoversDialog } from "./LeftoversDialog";
 
 interface ChatbotProps {
@@ -53,8 +51,6 @@ export const Chatbot = ({
     setApiKey(storedApiKey);
   }, []);
 
-  const mealPlanId = plan.plan_id;
-
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
   );
@@ -62,36 +58,7 @@ export const Chatbot = ({
     if (session) setUserSession(session);
   }, [session]);
 
-  const {
-    items: shoppingListItems,
-    isLoading: isListLoading,
-    removeItem,
-    removeItems,
-    addItems,
-    saveList,
-  } = useShoppingList(userSession, mealPlanId);
-
-  const { items: inventoryItems, upsertItem } = useInventory(userSession, (item) => {
-    // Handle restock recommendation in the main app
-    if (confirm(`You've run out of ${item.item_name}. Would you like to add it to your shopping list?`)) {
-      addItems([{
-        item: item.item_name,
-        quantity: 1,
-        unit: item.unit
-      }]);
-    }
-  });
-
-  const { preferences, updatePreferences } = usePreferences(userSession);
-
-  const {
-    items: leftoverItems,
-    isLoading: isLeftoversLoading,
-    addLeftover,
-    updateLeftover,
-    removeLeftover,
-    getLeftovers,
-  } = useLeftovers(userSession);
+  const chatData = useChatData(userSession, plan.plan_id);
 
   const {
     messages,
@@ -107,20 +74,20 @@ export const Chatbot = ({
     setThoughtSteps,
     onApiKeyMissing: () => setIsApiKeyDialogOpen(true),
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
-      saveList(newList);
+      chatData.shoppingList.saveList(newList);
     },
     onAddItemsToShoppingList: async (items) => {
-      await addItems(items);
+      await chatData.shoppingList.addItems(items);
       toast.success("I've updated your shopping list.");
     },
     onRemoveItemsFromShoppingList: async (itemNames) => {
-      await removeItems(itemNames);
+      await chatData.shoppingList.removeItems(itemNames);
       toast.success("I've removed the items from your shopping list.");
     },
-    shoppingListItems,
+    shoppingListItems: chatData.shoppingList.items,
     onUpdateInventory: async (items) => {
       for (const item of items) {
-        await upsertItem({
+        await chatData.inventory.upsertItem({
           ...item,
           location: item.location || 'pantry',
           notes: item.notes || 'Added by AI',
@@ -129,18 +96,18 @@ export const Chatbot = ({
       toast.success("Your inventory has been updated.");
     },
     onGetInventory: async () => {
-      return inventoryItems;
+      return chatData.inventory.items;
     },
     onGetUserPreferences: async () => {
-      return preferences;
+      return chatData.preferences.data;
     },
     onUpdateUserPreferences: async (updates) => {
-      await updatePreferences(updates as Partial<UserPreferences>);
+      await chatData.preferences.update(updates as Partial<UserPreferences>);
     },
     // Leftovers props
     setIsLeftoversOpen,
     onGetLeftovers: async () => {
-      await getLeftovers(); // Refreshes the list
+      await chatData.leftovers.get(); // Refreshes the list
       // After fetching, we need to return the fresh data.
       // The `leftoverItems` state might not be updated yet.
       // A direct fetch and return is more reliable here.
@@ -148,13 +115,13 @@ export const Chatbot = ({
       return data || [];
     },
     onAddLeftover: async (item) => {
-      await addLeftover(item);
+      await chatData.leftovers.add(item);
     },
     onUpdateLeftover: async (id, updates) => {
-      await updateLeftover(id, updates);
+      await chatData.leftovers.update(id, updates);
     },
     onRemoveLeftover: async (id) => {
-      await removeLeftover(id);
+      await chatData.leftovers.remove(id);
     },
     // Pass session and thought steps for persistence
     session: userSession,
@@ -192,24 +159,24 @@ export const Chatbot = ({
         </Card>
         <DialogContent className="max-w-md">
           <ShoppingList
-            items={shoppingListItems}
-            isLoading={isListLoading}
-            onRemove={removeItem}
+            items={chatData.shoppingList.items}
+            isLoading={chatData.shoppingList.isLoading}
+            onRemove={chatData.shoppingList.removeItem}
           />
         </DialogContent>
       </Dialog>
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
         <DialogContent className="max-w-md">
             <LeftoversDialog 
-                items={leftoverItems}
-                isLoading={isLeftoversLoading}
-                onRemove={removeLeftover}
+                items={chatData.leftovers.items}
+                isLoading={chatData.leftovers.isLoading}
+                onRemove={chatData.leftovers.remove}
                 onUpdateServings={(id, servings) => {
                   if (servings === 0) {
-                    removeLeftover(id);
+                    chatData.leftovers.remove(id);
                     toast.info("Leftover removed as servings reached 0.");
                   } else {
-                    updateLeftover(id, { servings });
+                    chatData.leftovers.update(id, { servings });
                   }
                 }}
             />

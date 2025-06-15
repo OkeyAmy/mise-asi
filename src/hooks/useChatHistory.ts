@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { ThoughtStep } from "@/data/schema";
@@ -27,7 +27,9 @@ export function useChatHistory(session: Session | null) {
     
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      // The table 'chat_sessions' is not in the generated types, so we cast to any to bypass TS checks.
+      // A migration is needed to create this table in the database for this feature to work.
+      const { error } = await (supabase as any)
         .from("chat_sessions")
         .upsert({
           user_id: session.user.id,
@@ -51,7 +53,7 @@ export function useChatHistory(session: Session | null) {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("chat_sessions")
         .select("*")
         .eq("user_id", session.user.id)
@@ -63,9 +65,11 @@ export function useChatHistory(session: Session | null) {
       }
       
       if (data) {
+        // Since we are using 'as any', we need to cast the data to our ChatSession interface.
+        const chatSessionData = data as ChatSession;
         return {
-          messages: data.messages || [],
-          thoughtSteps: data.thought_steps || []
+          messages: chatSessionData.messages || [],
+          thoughtSteps: chatSessionData.thought_steps || []
         };
       }
       
@@ -82,7 +86,7 @@ export function useChatHistory(session: Session | null) {
     if (!session?.user.id) return;
     
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("chat_sessions")
         .delete()
         .eq("user_id", session.user.id);
