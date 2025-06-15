@@ -162,34 +162,8 @@ export const useChat = ({
             funcResultMsg = "Meal plan updated successfully.";
             addThoughtStep("✅ Executed: updateMealPlan");
           } else if (functionCall.name === "showShoppingList") {
-            // AI generated shopping list (should be in MealPlan), get all ingredients and update supabase
-            try {
-              const plan = functionCall.args as MealPlan;
-              let allIngredients: ShoppingListItem[] = [];
-              if (plan?.days) {
-                const allIng = new Map<string, ShoppingListItem>();
-                plan.days.forEach((day) => {
-                  Object.values(day.meals).forEach((meal) => {
-                    meal.ingredients.forEach((ing) => {
-                      if (allIng.has(ing.item)) {
-                        const existing = allIng.get(ing.item)!;
-                        existing.quantity += ing.quantity;
-                      } else {
-                        allIng.set(ing.item, { ...ing });
-                      }
-                    });
-                  });
-                });
-                allIngredients = Array.from(allIng.values());
-              }
-              if(onUpdateShoppingList) {
-                onUpdateShoppingList(allIngredients);
-              }
-              funcResultMsg = "Shopping list updated and shown!";
-            } catch {
-              funcResultMsg = "Couldn't extract shopping list from plan.";
-            }
             setIsShoppingListOpen(true);
+            funcResultMsg = "Opening your shopping list.";
             addThoughtStep("✅ Executed: showShoppingList");
           } else if (functionCall.name === "updateInventory") {
             try {
@@ -228,7 +202,6 @@ export const useChat = ({
             } else {
               funcResultMsg = "Your shopping list is currently empty.";
             }
-            setIsShoppingListOpen(true);
             addThoughtStep("✅ Executed: getShoppingList");
           } else if (functionCall.name === "addToShoppingList") {
             try {
