@@ -216,7 +216,13 @@ export async function callGeminiWithStreaming(
     });
     
     const streamingResult = await model.generateContentStream({
-      contents
+      contents,
+      // @ts-ignore - this is a preview feature that might not be in the SDK types yet
+      generationConfig: {
+        thinkingConfig: {
+          includeThoughts: true,
+        },
+      },
     });
 
     let functionCallEncountered = false;
