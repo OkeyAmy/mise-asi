@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -111,7 +112,7 @@ export const Chatbot = ({
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col relative">
       <ApiKeyDialog
         isOpen={isApiKeyDialogOpen}
         onClose={() => setIsApiKeyDialogOpen(false)}
@@ -120,15 +121,17 @@ export const Chatbot = ({
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <Card className="flex flex-col h-full shadow-none border-0">
           <ChatHeader />
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden pb-20">
             <ChatMessageList messages={messages} isThinking={isThinking} />
+          </CardContent>
+          <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border">
             <ChatInput
               inputValue={inputValue}
               setInputValue={setInputValue}
               handleSendMessage={handleSendMessage}
               isThinking={isThinking}
             />
-          </CardContent>
+          </div>
         </Card>
         <DialogContent className="max-w-md">
           <ShoppingList

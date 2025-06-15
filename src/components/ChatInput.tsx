@@ -12,7 +12,7 @@ interface ChatInputProps {
 
 export const ChatInput = ({ inputValue, setInputValue, handleSendMessage, isThinking }: ChatInputProps) => {
   return (
-    <div className="p-4 border-t">
+    <div className="p-4">
       <form onSubmit={handleSendMessage} className="flex gap-2">
         <Input 
           value={inputValue} 
