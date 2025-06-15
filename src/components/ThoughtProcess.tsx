@@ -42,7 +42,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
       </CardHeader>
       <CardContent className="p-0">
         <ScrollArea className="h-[calc(100vh-120px)] p-6">
-          <Accordion type="single" collapsible className="w-full space-y-2">
+          <Accordion type="multiple" className="w-full space-y-2">
             {steps.map((step) => (
               <AccordionItem value={step.id} key={step.id} className="border-b-0 bg-secondary/30 rounded-md">
                 <AccordionTrigger

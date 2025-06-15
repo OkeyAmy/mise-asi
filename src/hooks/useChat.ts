@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
@@ -87,6 +88,10 @@ export const useChat = ({
       toast.error("Please set your Gemini API key first.");
       return;
     }
+
+    setThoughtSteps(prev => 
+      prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))
+    );
 
     const userInput = inputValue.trim();
     const userMessage: Message = {
