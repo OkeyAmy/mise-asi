@@ -17,9 +17,11 @@ interface ChatbotProps {
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
+  inventory: string[];
+  setInventory: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen, setThoughtSteps }: ChatbotProps) => {
+export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOpen, setThoughtSteps, inventory, setInventory }: ChatbotProps) => {
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
 
@@ -45,6 +47,8 @@ export const Chatbot = ({ plan, setPlan, isShoppingListOpen, setIsShoppingListOp
     setIsShoppingListOpen,
     setThoughtSteps,
     onApiKeyMissing: () => setIsApiKeyDialogOpen(true),
+    inventory,
+    setInventory,
   });
 
   const handleSaveApiKey = (key: string) => {

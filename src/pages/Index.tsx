@@ -9,6 +9,7 @@ const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
+  const [inventory, setInventory] = useState<string[]>(['Eggs', 'Bread', 'Milk']);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
@@ -19,6 +20,8 @@ const Index = () => {
           isShoppingListOpen={isShoppingListOpen}
           setIsShoppingListOpen={setIsShoppingListOpen}
           setThoughtSteps={setThoughtSteps}
+          inventory={inventory}
+          setInventory={setInventory}
         />
       </div>
       <div className="w-96 border-l p-4">

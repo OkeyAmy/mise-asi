@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
@@ -20,9 +21,11 @@ interface UseChatProps {
   setIsShoppingListOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   onApiKeyMissing: () => void;
+  inventory: string[];
+  setInventory: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const useChat = ({ apiKey, setPlan, setIsShoppingListOpen, setThoughtSteps, onApiKeyMissing }: UseChatProps) => {
+export const useChat = ({ apiKey, setPlan, setIsShoppingListOpen, setThoughtSteps, onApiKeyMissing, inventory, setInventory }: UseChatProps) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -61,6 +64,13 @@ export const useChat = ({ apiKey, setPlan, setIsShoppingListOpen, setThoughtStep
         role: msg.sender === 'bot' ? 'model' : 'user',
         parts: [{ text: msg.text }],
     }));
+
+    if (inventory.length > 0) {
+      history.unshift({
+          role: 'user',
+          parts: [{ text: `System Note: The user's current inventory is: [${inventory.join(', ')}]. Use the 'updateInventory' function if the user wants to change it.` }]
+      });
+    }
 
     let accumulatedText = "";
     let functionCall: FunctionCall | null = null;
@@ -104,6 +114,25 @@ export const useChat = ({ apiKey, setPlan, setIsShoppingListOpen, setThoughtStep
                 setIsShoppingListOpen(true);
                 funcResultMsg = "Shopping list is now open.";
                 addThoughtStep("✅ Executed: showShoppingList");
+            } else if (functionCall.name === 'updateInventory') {
+                const { add, remove } = functionCall.args as { add?: string[]; remove?: string[] };
+                const currentInventory = new Set(inventory.map(i => i.toLowerCase()));
+
+                if (add?.length) {
+                    add.forEach(item => currentInventory.add(item.toLowerCase()));
+                }
+
+                if (remove?.length) {
+                    remove.forEach(item => currentInventory.delete(item.toLowerCase()));
+                }
+                
+                const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+                const updatedInventory = Array.from(currentInventory).map(capitalize);
+
+                setInventory(updatedInventory);
+                
+                funcResultMsg = `OK. Your inventory is updated.`;
+                addThoughtStep("✅ Executed: updateInventory", `Inventory updated to: ${updatedInventory.join(', ')}`);
             }
 
             const functionResponsePart = {
