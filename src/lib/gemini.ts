@@ -327,33 +327,7 @@ export async function callGeminiWithStreaming(
     await handlers.onComplete();
 
   } catch (error) {
-    console.error("Detailed Gemini API error:", error);
-
-    if (error instanceof Error) {
-        if (error.message.includes('API key not valid') || 
-            error.message.includes('API_KEY_INVALID') ||
-            error.message.includes('invalid API key')) {
-          handlers.onError(new Error("The provided Gemini API key is not valid. Please check and try again."));
-          return;
-        }
-        if (error.message.includes('quota') || error.message.includes('billing')) {
-            handlers.onError(new Error("API quota exceeded or billing issue. Please check your Gemini API account."));
-            return;
-        }
-        if (error.message.includes('Failed to fetch')) {
-             handlers.onError(new Error("Failed to connect to Gemini. This could be due to an invalid API key, a network issue, or a browser extension blocking the request. Please check your key and connection."));
-             return;
-        }
-    }
-    
-    // Check for Groq key before attempting fallback
-    const groqApiKey = process.env.GROQ_API_KEY || (typeof window !== "undefined" && localStorage.getItem("groq_api_key"));
-    if (!groqApiKey) {
-        const originalError = error instanceof Error ? error : new Error("An unexpected error occurred with Gemini.");
-        handlers.onError(new Error(`Gemini API Error: ${originalError.message}. No fallback API key is configured.`));
-        return;
-    }
-
+    console.error("Detailed Gemini API error, falling back to Groq:", error);
     handlers.onThought("Gemini not responding, switching to Groq fallback...");
     await callGroqWithStreaming(contents, handlers);
   }

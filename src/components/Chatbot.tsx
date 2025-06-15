@@ -36,12 +36,13 @@ export const Chatbot = ({
   const [isApiKeyDialogOpen, setIsApiKeyDialogOpen] = useState(false);
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("gemini_api_key");
+    let storedApiKey = localStorage.getItem("gemini_api_key");
     if (!storedApiKey) {
-      setIsApiKeyDialogOpen(true);
-    } else {
-      setApiKey(storedApiKey);
+      storedApiKey = "AIzaSyB6j2kGAu88UqOhVNN8KSbUjijlXMfdovY";
+      localStorage.setItem("gemini_api_key", storedApiKey);
+      toast.info("A default API key has been configured.");
     }
+    setApiKey(storedApiKey);
   }, []);
 
   const mealPlanId = plan.plan_id;
