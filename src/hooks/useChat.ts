@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Content, FunctionCall } from "@google/generative-ai";
 import { MealPlan, ShoppingListItem, ThoughtStep } from "@/data/schema";
@@ -19,6 +19,20 @@ const initialMessages: Message[] = [
   },
 ];
 
+const getInitialMessages = (): Message[] => {
+  if (typeof window === 'undefined') return initialMessages;
+  try {
+    const stored = localStorage.getItem("chat_history");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error("Could not parse chat history from local storage", e);
+  }
+  return initialMessages;
+}
+
 interface UseChatProps {
   apiKey: string | null;
   setPlan: React.Dispatch<React.SetStateAction<MealPlan>>;
@@ -26,6 +40,7 @@ interface UseChatProps {
   setThoughtSteps: React.Dispatch<React.SetStateAction<ThoughtStep[]>>;
   onApiKeyMissing: () => void;
   onUpdateShoppingList?: (items: ShoppingListItem[]) => void;
+  onUpdateInventory?: (items: { item_name: string; quantity: number; unit: string; category: string }[]) => Promise<void>;
 }
 
 export const useChat = ({
@@ -35,10 +50,17 @@ export const useChat = ({
   setThoughtSteps,
   onApiKeyMissing,
   onUpdateShoppingList,
+  onUpdateInventory,
 }: UseChatProps) => {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(getInitialMessages);
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("chat_history", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const addThoughtStep = (
     step: string,
@@ -157,6 +179,20 @@ export const useChat = ({
             }
             setIsShoppingListOpen(true);
             addThoughtStep("✅ Executed: showShoppingList");
+          } else if (functionCall.name === "updateInventory") {
+            try {
+              const { items } = functionCall.args as { items: { item_name: string; quantity: number; unit: string; category: string }[] };
+              if (onUpdateInventory) {
+                await onUpdateInventory(items);
+                funcResultMsg = "I've updated your inventory with the new items.";
+              } else {
+                funcResultMsg = "Inventory function is not available right now.";
+              }
+            } catch (e) {
+              console.error(e);
+              funcResultMsg = "I had trouble updating your inventory.";
+            }
+            addThoughtStep("✅ Executed: updateInventory");
           }
 
           const functionResponsePart = {

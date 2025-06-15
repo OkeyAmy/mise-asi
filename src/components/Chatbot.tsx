@@ -11,6 +11,7 @@ import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { useShoppingList } from "@/hooks/useShoppingList";
+import { useInventory } from "@/hooks/useInventory";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 
@@ -44,10 +45,8 @@ export const Chatbot = ({
     setApiKey(storedApiKey);
   }, []);
 
-  // Use the actual active mealPlan's ID
   const mealPlanId = plan.plan_id;
 
-  // Maintain session (fallback for old prop pattern)
   const [userSession, setUserSession] = useState<Session | null>(
     session || null
   );
@@ -55,13 +54,14 @@ export const Chatbot = ({
     if (session) setUserSession(session);
   }, [session]);
 
-  // Hook for getting/updating shopping list in realtime with Supabase
   const {
     items: shoppingListItems,
     isLoading: isListLoading,
     removeItem,
     saveList,
   } = useShoppingList(userSession, mealPlanId);
+
+  const { upsertItem } = useInventory(userSession);
 
   const {
     messages,
@@ -76,9 +76,18 @@ export const Chatbot = ({
     setThoughtSteps,
     onApiKeyMissing: () => setIsApiKeyDialogOpen(true),
     onUpdateShoppingList: (newList: ShoppingListItem[]) => {
-      // Overwrite DB and UI version of shopping list whenever AI asks to refresh
       saveList(newList);
     },
+    onUpdateInventory: async (items) => {
+      for (const item of items) {
+        await upsertItem({
+          ...item,
+          location: item.location || 'pantry',
+          notes: item.notes || 'Added by AI',
+        });
+      }
+      toast.success("Your inventory has been updated.");
+    }
   });
 
   const handleSaveApiKey = (key: string) => {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 export interface InventoryItem {
   id: string;
@@ -46,36 +47,25 @@ export function useInventory(session: Session | null) {
       .order("category", { ascending: true })
       .order("item_name", { ascending: true });
 
-    if (data) {
-      setItems(data);
-    }
-    if (error) {
-      console.error("Error fetching inventory:", error);
-    }
+    if (data) setItems(data);
+    if (error) console.error("Error fetching inventory:", error);
     setIsLoading(false);
   }, [session]);
 
   const addItem = async (item: Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
     if (!session?.user.id) return;
-
     const { data, error } = await supabase
       .from("user_inventory")
-      .insert({
-        ...item,
-        user_id: session.user.id,
-      })
+      .insert({ ...item, user_id: session.user.id })
       .select()
       .single();
 
-    if (data && !error) {
-      setItems(prev => [...prev, data]);
-    }
+    if (data) setItems(prev => [...prev, data]);
     return { data, error };
   };
 
   const updateItem = async (id: string, updates: Partial<InventoryItem>) => {
     if (!session?.user.id) return;
-
     const { data, error } = await supabase
       .from("user_inventory")
       .update(updates)
@@ -84,51 +74,50 @@ export function useInventory(session: Session | null) {
       .select()
       .single();
 
-    if (data && !error) {
-      setItems(prev => prev.map(item => item.id === id ? data : item));
-    }
+    if (data) setItems(prev => prev.map(item => item.id === id ? data : item));
     return { data, error };
   };
 
   const deleteItem = async (id: string) => {
     if (!session?.user.id) return;
-
-    const { error } = await supabase
-      .from("user_inventory")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", session.user.id);
-
-    if (!error) {
-      setItems(prev => prev.filter(item => item.id !== id));
-    }
+    const { error } = await supabase.from("user_inventory").delete().eq("id", id);
+    if (!error) setItems(prev => prev.filter(item => item.id !== id));
     return { error };
   };
 
-  const getItemsByCategory = (category: string) => {
-    return items.filter(item => item.category === category);
+  const upsertItem = async (item: Partial<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & { item_name: string }) => {
+    if (!session?.user.id) return;
+    const { data, error } = await supabase
+      .from("user_inventory")
+      .upsert({ ...item, user_id: session.user.id, }, { onConflict: 'user_id, item_name' })
+      .select().single();
+    
+    if (error) {
+        toast.error(`Failed to upsert ${item.item_name}: ${error.message}`);
+    } else if (data) {
+        setItems(prev => {
+            const index = prev.findIndex(i => i.id === data.id);
+            if (index > -1) {
+                const newItems = [...prev];
+                newItems[index] = data;
+                return newItems;
+            }
+            return [...prev, data];
+        });
+    }
+    return {data, error};
   };
 
-  const searchItems = (query: string) => {
-    return items.filter(item => 
-      item.item_name.toLowerCase().includes(query.toLowerCase()) ||
-      item.category.toLowerCase().includes(query.toLowerCase())
-    );
-  };
+  const getItemsByCategory = (category: string) => items.filter(item => item.category === category);
+
+  const searchItems = (query: string) => items.filter(item => 
+    item.item_name.toLowerCase().includes(query.toLowerCase()) ||
+    item.category.toLowerCase().includes(query.toLowerCase())
+  );
 
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
 
-  return {
-    items,
-    isLoading,
-    addItem,
-    updateItem,
-    deleteItem,
-    getItemsByCategory,
-    searchItems,
-    fetchInventory,
-    categories: INVENTORY_CATEGORIES
-  };
+  return { items, isLoading, addItem, updateItem, deleteItem, getItemsByCategory, searchItems, fetchInventory, upsertItem, categories: INVENTORY_CATEGORIES };
 }

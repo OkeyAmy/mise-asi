@@ -13,30 +13,17 @@ const InventoryPage = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-      } else {
-        navigate('/auth');
-      }
+      if (session) setSession(session);
+      else navigate('/auth');
     });
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        navigate('/auth');
-      }
+      if (!session) navigate('/auth');
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
-
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -49,9 +36,6 @@ const InventoryPage = () => {
             </Button>
             <h1 className="text-2xl font-bold">Manage Your Home Inventory</h1>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            Logout
-          </Button>
         </div>
         <InventoryManager session={session} />
       </div>

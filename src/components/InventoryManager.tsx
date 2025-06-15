@@ -23,7 +23,7 @@ export const InventoryManager = ({ session }: InventoryManagerProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-  const [newItem, setNewItem] = useState({
+  const [newItem, setNewItem] = useState<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>>({
     item_name: "",
     category: "other",
     quantity: 0,
@@ -38,32 +38,20 @@ export const InventoryManager = ({ session }: InventoryManagerProps) => {
       toast.error("Item name is required");
       return;
     }
-
     const { error } = await addItem(newItem);
-    if (error) {
-      toast.error("Failed to add item");
-    } else {
+    if (error) toast.error("Failed to add item");
+    else {
       toast.success("Item added successfully");
-      setNewItem({
-        item_name: "",
-        category: "other",
-        quantity: 0,
-        unit: "piece",
-        expiry_date: "",
-        location: "pantry",
-        notes: ""
-      });
+      setNewItem({ item_name: "", category: "other", quantity: 0, unit: "piece", expiry_date: "", location: "pantry", notes: "" });
       setIsAddingItem(false);
     }
   };
 
   const handleUpdateItem = async () => {
     if (!editingItem) return;
-
     const { error } = await updateItem(editingItem.id, editingItem);
-    if (error) {
-      toast.error("Failed to update item");
-    } else {
+    if (error) toast.error("Failed to update item");
+    else {
       toast.success("Item updated successfully");
       setEditingItem(null);
     }
@@ -72,11 +60,8 @@ export const InventoryManager = ({ session }: InventoryManagerProps) => {
   const handleDeleteItem = async (id: string, itemName: string) => {
     if (confirm(`Are you sure you want to delete "${itemName}"?`)) {
       const { error } = await deleteItem(id);
-      if (error) {
-        toast.error("Failed to delete item");
-      } else {
-        toast.success("Item deleted successfully");
-      }
+      if (error) toast.error("Failed to delete item");
+      else toast.success("Item deleted successfully");
     }
   };
 
@@ -87,130 +72,73 @@ export const InventoryManager = ({ session }: InventoryManagerProps) => {
       : getItemsByCategory(selectedCategory);
 
   const groupedItems = filteredItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
+    const categoryKey = item.category as keyof typeof categories;
+    if (!acc[categoryKey]) acc[categoryKey] = [];
+    acc[categoryKey].push(item);
     return acc;
-  }, {} as Record<string, InventoryItem[]>);
+  }, {} as Record<keyof typeof categories, InventoryItem[]>);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           Home Inventory
-          <Button onClick={() => setIsAddingItem(true)} size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
+          <Button onClick={() => setIsAddingItem(true)} size="sm"><Plus className="w-4 h-4 mr-2" />Add Item</Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Search and Filter */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
-            />
+            <Input placeholder="Search items..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8" />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by category" />
-            </SelectTrigger>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Filter by category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {Object.entries(categories).map(([key, label]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
+              {Object.entries(categories).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Add Item Form */}
         {isAddingItem && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Add New Item</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">Add New Item</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="item-name">Item Name *</Label>
-                  <Input
-                    id="item-name"
-                    value={newItem.item_name}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, item_name: e.target.value }))}
-                    placeholder="e.g., Olive Oil"
-                  />
+                  <Input id="item-name" value={newItem.item_name} onChange={(e) => setNewItem(prev => ({ ...prev, item_name: e.target.value }))} placeholder="e.g., Olive Oil" />
                 </div>
                 <div>
                   <Label htmlFor="category">Category</Label>
                   <Select value={newItem.category} onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Object.entries(categories).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
+                      {Object.entries(categories).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label htmlFor="quantity">Quantity</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={newItem.quantity}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                  />
+                  <Input id="quantity" type="number" min="0" step="0.1" value={newItem.quantity} onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))} />
                 </div>
                 <div>
                   <Label htmlFor="unit">Unit</Label>
-                  <Input
-                    id="unit"
-                    value={newItem.unit}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
-                    placeholder="e.g., cups, lbs, pieces"
-                  />
+                  <Input id="unit" value={newItem.unit} onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))} placeholder="e.g., cups, lbs, pieces" />
                 </div>
                 <div>
                   <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={newItem.location}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="e.g., pantry, fridge, freezer"
-                  />
+                  <Input id="location" value={newItem.location} onChange={(e) => setNewItem(prev => ({ ...prev, location: e.target.value }))} placeholder="e.g., pantry, fridge, freezer" />
                 </div>
                 <div>
                   <Label htmlFor="expiry">Expiry Date (optional)</Label>
-                  <Input
-                    id="expiry"
-                    type="date"
-                    value={newItem.expiry_date}
-                    onChange={(e) => setNewItem(prev => ({ ...prev, expiry_date: e.target.value }))}
-                  />
+                  <Input id="expiry" type="date" value={newItem.expiry_date} onChange={(e) => setNewItem(prev => ({ ...prev, expiry_date: e.target.value }))} />
                 </div>
               </div>
               <div>
                 <Label htmlFor="notes">Notes (optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={newItem.notes}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes about this item..."
-                />
+                <Textarea id="notes" value={newItem.notes || ""} onChange={(e) => setNewItem(prev => ({ ...prev, notes: e.target.value }))} placeholder="Additional notes about this item..." />
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleAddItem}>Add Item</Button>
@@ -220,118 +148,44 @@ export const InventoryManager = ({ session }: InventoryManagerProps) => {
           </Card>
         )}
 
-        {/* Items List */}
         <div className="space-y-4 max-h-96 overflow-y-auto">
-          {isLoading ? (
-            <div>Loading inventory...</div>
-          ) : Object.keys(groupedItems).length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No items found. Add some items to get started!
-            </div>
-          ) : (
+          {isLoading ? <div>Loading inventory...</div> : Object.keys(groupedItems).length === 0 ? <div className="text-center text-muted-foreground py-8">No items found. Add some!</div> : 
             Object.entries(groupedItems).map(([category, categoryItems]) => (
               <div key={category}>
-                <h3 className="font-semibold text-sm text-muted-foreground mb-2">
-                  {categories[category as keyof typeof categories] || category}
-                </h3>
+                <h3 className="font-semibold text-sm text-muted-foreground mb-2">{categories[category as keyof typeof categories] || category}</h3>
                 <div className="space-y-2">
                   {categoryItems.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{item.item_name}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {item.quantity} {item.unit}
-                          </Badge>
-                          {item.location && (
-                            <Badge variant="outline" className="text-xs">
-                              {item.location}
-                            </Badge>
-                          )}
+                          <Badge variant="secondary" className="text-xs">{item.quantity} {item.unit}</Badge>
+                          {item.location && <Badge variant="outline" className="text-xs">{item.location}</Badge>}
                         </div>
-                        {item.notes && (
-                          <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>
-                        )}
-                        {item.expiry_date && (
-                          <p className="text-xs text-muted-foreground">
-                            Expires: {new Date(item.expiry_date).toLocaleDateString()}
-                          </p>
-                        )}
+                        {item.notes && <p className="text-sm text-muted-foreground mt-1">{item.notes}</p>}
+                        {item.expiry_date && <p className="text-xs text-muted-foreground">Expires: {new Date(item.expiry_date).toLocaleDateString()}</p>}
                       </div>
                       <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDeleteItem(item.id, item.item_name)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingItem(item)}><Edit className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteItem(item.id, item.item_name)}><Trash2 className="w-4 h-4" /></Button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             ))
-          )}
+          }
         </div>
 
-        {/* Edit Item Dialog */}
         {editingItem && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Edit Item</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">Edit Item</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-item-name">Item Name *</Label>
-                  <Input
-                    id="edit-item-name"
-                    value={editingItem.item_name}
-                    onChange={(e) => setEditingItem(prev => prev ? ({ ...prev, item_name: e.target.value }) : null)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select value={editingItem.category} onValueChange={(value) => setEditingItem(prev => prev ? ({ ...prev, category: value }) : null)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(categories).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-quantity">Quantity</Label>
-                  <Input
-                    id="edit-quantity"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={editingItem.quantity}
-                    onChange={(e) => setEditingItem(prev => prev ? ({ ...prev, quantity: parseFloat(e.target.value) || 0 }) : null)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-unit">Unit</Label>
-                  <Input
-                    id="edit-unit"
-                    value={editingItem.unit}
-                    onChange={(e) => setEditingItem(prev => prev ? ({ ...prev, unit: e.target.value }) : null)}
-                  />
-                </div>
+                <div><Label>Item Name *</Label><Input value={editingItem.item_name} onChange={(e) => setEditingItem(p => p ? { ...p, item_name: e.target.value } : null)} /></div>
+                <div><Label>Category</Label><Select value={editingItem.category} onValueChange={(v) => setEditingItem(p => p ? { ...p, category: v } : null)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(categories).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}</SelectContent></Select></div>
+                <div><Label>Quantity</Label><Input type="number" min="0" step="0.1" value={editingItem.quantity} onChange={(e) => setEditingItem(p => p ? { ...p, quantity: parseFloat(e.target.value) || 0 } : null)} /></div>
+                <div><Label>Unit</Label><Input value={editingItem.unit} onChange={(e) => setEditingItem(p => p ? { ...p, unit: e.target.value } : null)} /></div>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleUpdateItem}>Update Item</Button>
