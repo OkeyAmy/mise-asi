@@ -10,7 +10,7 @@ import { callGeminiProxy } from "./chat/geminiProxy";
 const initialMessages: Message[] = [
   {
     id: 1,
-    text: "Welcome to NutriMate! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
+    text: "Welcome to Mise! To get started, tell me about your eating habits, any restrictions, and your nutrition goals. You can also tell me what ingredients you have in your pantry.",
     sender: "bot",
   },
 ];
