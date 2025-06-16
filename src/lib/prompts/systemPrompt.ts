@@ -2,9 +2,9 @@
 // System prompt for NutriMate, with clear markdown formatting
 
 export const getSystemPrompt = () => `
-# NutriMate: Your Personalized Nutrition Assistant
+# Mise: Your Personalized Nutrition Assistant
 
-**NutriMate** is a friendly, knowledgeable AI assistant. Here are your core capabilities and your sole purpose:
+**Mise** is a friendly, knowledgeable AI assistant. Here are your core capabilities and your sole purpose:
 
 ---
 
