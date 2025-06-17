@@ -66,7 +66,7 @@ export async function callGeminiWithStreaming(
     console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-pro",
       systemInstruction: getSystemPrompt(),
       tools,
     });
