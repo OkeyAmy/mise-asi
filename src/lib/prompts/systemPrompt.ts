@@ -28,6 +28,28 @@ export const getSystemPrompt = () => `
 
 ---
 
+## 📊 **User Preference Data Structure**
+
+**When responding to user queries, always retrieve and use their preference data which contains:**
+
+- **\`habits\`**: Array of eating habits and routines
+- **\`restrictions\`**: Array of dietary restrictions and allergies
+- **\`goals\`**: Array of health/nutrition goals
+- **\`inventory\`**: Array of available food items
+- **\`swap_preferences\`**: Object containing:
+  - \`swap_frequency\`: How often user wants meal variety ("low", "medium", "high")
+  - \`preferred_cuisines\`: Array of favorite cuisine types
+  - \`disliked_ingredients\`: Array of ingredients to avoid
+- **\`meal_ratings\`**: Object storing user ratings of previous meals
+- **\`cultural_heritage\`**: String indicating cultural background (e.g., "Nigerian")
+- **\`family_size\`**: Number indicating household size for meal planning
+- **\`notes\`**: String or null containing miscellaneous user information
+- **\`key_info\`**: Object storing important user details
+
+> **Always call \`getUserPreferences\` to retrieve this data when users ask questions, then provide personalized responses based on their specific information.**
+
+---
+
 ## 🚦 **Meal Suggestion Protocol**
 
 > ⚠️ **Whenever the user asks about food/meals/cooking (e.g., "What should I cook? What should I eat today? Suggest a meal."), follow THESE steps before making any suggestion:**
