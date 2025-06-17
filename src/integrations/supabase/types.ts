@@ -33,6 +33,38 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          id: string
+          message: string
+          sentiment: string | null
+          user_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          message: string
+          sentiment?: string | null
+          user_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          sentiment?: string | null
+          user_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       meal_plans: {
         Row: {
           created_at: string

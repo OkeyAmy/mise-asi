@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -45,6 +44,43 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
   const handleRemoveCancel = () => {
     setItemToRemove(null); // Close dialog
   };
+
+  const formatShoppingList = () => {
+    return items
+      .map((item) => `${item.item}: ${item.quantity} ${item.unit}`)
+      .join('\n');
+  };
+
+  const handleDownload = () => {
+    const listContent = formatShoppingList();
+    const blob = new Blob([listContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'shopping-list.txt';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    const listContent = formatShoppingList();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Shopping List',
+          text: listContent,
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      alert('Sharing is not supported on this browser. You can download the list instead.');
+    }
+  };
+
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   return (
     <>
@@ -93,12 +129,14 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
             )}
           </div>
           <div className="flex gap-2 mt-6">
-            <Button className="w-full">
+            <Button className="w-full" onClick={handleDownload}>
               <Download className="mr-2 h-4 w-4" /> Download
             </Button>
-            <Button variant="outline" className="w-full">
-              <Share2 className="mr-2 h-4 w-4" /> Share
-            </Button>
+            {canShare && (
+              <Button variant="outline" className="w-full" onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" /> Share
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

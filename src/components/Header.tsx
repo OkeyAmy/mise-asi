@@ -1,8 +1,9 @@
-
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Package, LogOut, Utensils } from "lucide-react";
+import { Logo } from '@/components/Logo';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import FeedbackWidget from '@/components/FeedbackWidget';
 
 interface HeaderProps {
   onShoppingListOpen: () => void;
@@ -21,11 +22,10 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => 
       <div className="flex flex-col items-start w-full">
         <div className="flex justify-between items-center w-full">
           <div>
-            <div className="text-lg font-bold text-primary">
-              Mise
-            </div>
+            <Logo className="text-lg" />
           </div>
           <div className="flex gap-1 sm:gap-2">
+            <FeedbackWidget />
             <Button 
               variant="outline" 
               onClick={onShoppingListOpen}
@@ -57,10 +57,10 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => 
               variant="outline" 
               onClick={handleLogout}
               size="sm"
-              className="px-2 sm:px-4 text-xs sm:text-sm"
+              className="px-2 sm:px-3"
+              aria-label="Logout"
             >
-              <LogOut className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden xs:inline sm:inline">Logout</span>
+              <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>

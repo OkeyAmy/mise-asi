@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
@@ -53,7 +52,7 @@ export const ThoughtProcess = ({ steps }: ThoughtProcessProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0 flex-1 min-h-0 overflow-hidden">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full overscroll-contain">
           <div className="p-4 space-y-0">
             {steps.map((step, index) => (
               <div key={step.id} className="flex gap-4">

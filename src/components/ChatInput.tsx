@@ -17,7 +17,7 @@ export const ChatInput = ({ inputValue, setInputValue, handleSendMessage, isThin
         <Input 
           value={inputValue} 
           onChange={(e) => setInputValue(e.target.value)} 
-          placeholder="Message NutriMate..." 
+          placeholder="Message Mise..." 
           disabled={isThinking} 
         />
         <Button type="submit" size="icon" disabled={isThinking}>

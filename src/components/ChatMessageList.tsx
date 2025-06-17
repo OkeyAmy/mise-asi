@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ScrollArea } from "./ui/scroll-area";
@@ -25,7 +24,7 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
   }, [messages, isThinking]);
 
   return (
-    <ScrollArea className="flex-1 p-6">
+    <ScrollArea className="flex-1 p-6 overscroll-contain">
       <div className="space-y-4">
         {messages.map((message) => (
           <div key={message.id} className={cn("flex items-end gap-2", message.sender === "user" ? "justify-end" : "justify-start")}>

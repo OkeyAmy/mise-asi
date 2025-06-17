@@ -1,5 +1,6 @@
-
 import { ResetConversationButton } from "./ResetConversationButton";
+import { useNavigate } from 'react-router-dom';
+import { Logo } from '@/components/Logo';
 
 interface ChatHeaderProps {
   onResetConversation: () => void;
@@ -13,9 +14,7 @@ export const ChatHeader = (_props: ChatHeaderProps) => {
         <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
           <span className="text-primary-foreground font-semibold text-sm">M</span>
         </div>
-        <div>
-          <h2 className="font-semibold">Mise</h2>
-        </div>
+        <Logo className="text-lg font-semibold" />
       </div>
     </div>
   );
