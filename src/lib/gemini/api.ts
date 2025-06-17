@@ -14,7 +14,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
     console.log("Calling Gemini with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-preview-05-20",
+      model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: getSystemPrompt(),
       tools,
     });
@@ -66,7 +66,7 @@ export async function callGeminiWithStreaming(
     console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-pro",
+      model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: getSystemPrompt(),
       tools,
     });
