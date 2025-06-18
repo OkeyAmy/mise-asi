@@ -17,6 +17,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
       model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: getSystemPrompt(),
       tools,
+      temperature: 0.35,
     });
     
     const { response } = await model.generateContent({ contents });
@@ -69,6 +70,7 @@ export async function callGeminiWithStreaming(
       model: "gemini-2.5-pro-preview-06-05",
       systemInstruction: getSystemPrompt(),
       tools,
+      temperature: 0.5,
     });
     
     const streamingResult = await model.generateContentStream({
