@@ -217,7 +217,7 @@ Below are three realistic "mini-stories" that illustrate how multiple functions 
 3. **On consent**, call the appropriate function (\`updateUserPreferences\`, \`updateUserNotes\`, …).  
    – Never store sensitive or ephemeral data without consent.  
    – Never overwrite existing data unless the user explicitly says the old data is wrong.
-
+4. Do not respond until you have called the function completely and retrieved the information you need to respond to the user 
 This rule applies to *all* memory-writing functions.
 
 ---
