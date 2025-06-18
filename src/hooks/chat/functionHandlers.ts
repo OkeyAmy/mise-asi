@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlers/handlerUtils";
 import { handleInventoryFunctions } from "./handlers/inventoryHandlers";
@@ -9,6 +8,7 @@ import { handleShoppingListFunctions } from "./handlers/shoppingListHandlers";
 import { handleUtilityFunctions } from "./handlers/utilityHandlers";
 import { handleNotesFunctions } from "./handlers/notesHandlers";
 
+// Function handler mapping - each function is handled independently and can be called in parallel
 const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: FunctionHandlerArgs) => Promise<string> } = {
   suggestMeal: handleMealFunctions,
   updateMealPlan: handleMealFunctions,
@@ -30,6 +30,14 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
   updateUserNotes: handleNotesFunctions,
 };
 
+/**
+ * Handles individual function calls. This function is designed to work with parallel execution.
+ * Multiple functions can be called simultaneously via Promise.all() in useChat.ts
+ * 
+ * @param functionCall - The function call from Gemini
+ * @param args - Arguments including data handlers and UI updaters
+ * @returns Promise<string> - Result message that will be sent back to the LLM
+ */
 export const handleFunctionCall = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs

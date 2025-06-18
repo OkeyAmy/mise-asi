@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { ShoppingListItem } from "@/data/schema";
 import { FunctionHandlerArgs } from "./handlerUtils";
@@ -15,11 +14,23 @@ export const handleShoppingListFunctions = async (
     funcResultMsg = "I've opened your shopping list for you.";
     addThoughtStep("✅ Executed: showShoppingList");
   } else if (functionCall.name === "getShoppingList") {
+    addThoughtStep(
+      "🔨 Retrieving shopping list data",
+      "Loading all items planned for purchase",
+      "completed"
+    );
+    
     if (shoppingListItems && shoppingListItems.length > 0) {
-      const itemsList = shoppingListItems.map(item => `- ${item.quantity} ${item.unit} of ${item.item}`).join('\n');
-      funcResultMsg = `Here is your current shopping list:\n${itemsList}`;
+      let shoppingListDetails = "Current shopping list items:\n\n";
+      
+      shoppingListItems.forEach(item => {
+        shoppingListDetails += `- ${item.quantity} ${item.unit} of ${item.item}\n`;
+      });
+      
+      shoppingListDetails += "\nUse this shopping list to help plan meals or suggest modifications based on what the user is planning to buy. You can also suggest additional items if needed for complete meal preparations.";
+      funcResultMsg = shoppingListDetails;
     } else {
-      funcResultMsg = "Your shopping list is currently empty.";
+      funcResultMsg = "The shopping list is currently empty. You can suggest items to add based on meal recommendations or when the user mentions they need ingredients.";
     }
     addThoughtStep("✅ Executed: getShoppingList");
   } else if (functionCall.name === "addToShoppingList") {

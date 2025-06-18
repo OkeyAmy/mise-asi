@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { LeftoverItem } from "@/data/schema";
 import { FunctionHandlerArgs, sanitizeDataForDisplay } from "./handlerUtils";
@@ -19,16 +18,31 @@ export const handleLeftoverFunctions = async (
     try {
       if (onGetLeftovers) {
         const leftovers = await onGetLeftovers();
-        const sanitizedData = sanitizeDataForDisplay(leftovers);
         addThoughtStep(
-          "🔨 Preparing to call function: getLeftovers",
-          JSON.stringify(sanitizedData, null, 2),
+          "🔨 Retrieving current leftovers data",
+          "Loading all leftover meals and portions",
           "completed"
         );
+        
         if (leftovers.length > 0) {
-          funcResultMsg = "Here are your current leftovers:\n" + leftovers.map(item => `- ${item.meal_name} (${item.servings} servings)`).join('\n');
+          const sanitizedData = sanitizeDataForDisplay(leftovers);
+          
+          let leftoverDetails = "Current leftovers available:\n\n";
+          sanitizedData.forEach((item: any) => {
+            leftoverDetails += `**${item.meal_name}**\n`;
+            leftoverDetails += `- Servings available: ${item.servings}\n`;
+            if (item.notes) leftoverDetails += `- Notes: ${item.notes}\n`;
+            if (item.date_created) {
+              const createdDate = new Date(item.date_created);
+              leftoverDetails += `- Date created: ${createdDate.toLocaleDateString()}\n`;
+            }
+            leftoverDetails += '\n';
+          });
+          
+          leftoverDetails += "Ask the user if they want to eat any of these leftovers before suggesting new meal options. This helps reduce food waste and saves cooking time.";
+          funcResultMsg = leftoverDetails;
         } else {
-          funcResultMsg = "You have no leftovers. Good job!";
+          funcResultMsg = "No leftovers are currently stored. You can suggest fresh meals without considering existing leftovers.";
         }
       } else {
         funcResultMsg = "Leftovers function is not available right now.";

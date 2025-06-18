@@ -138,12 +138,16 @@ export const useChat = (props: UseChatProps) => {
       if (functionCalls.length > 0) {
         addThoughtStep(`🔨 Calling functions: ${functionCalls.map(c => c.name).join(', ')}`);
         
+        // Execute all function calls in parallel for maximum efficiency
+        // This allows simultaneous data gathering (e.g., getUserPreferences + getInventory + getLeftovers + getCurrentTime)
         const functionExecutionPromises = functionCalls.map((call: any) => 
           handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
         );
 
+        // Wait for all functions to complete in parallel
         const functionResults = await Promise.all(functionExecutionPromises);
 
+        // Prepare the conversation history with function calls and results
         const modelTurnParts: Part[] = functionCalls.map((fc: any) => ({ functionCall: fc }));
         const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
           functionResponse: {

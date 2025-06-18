@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -13,15 +12,27 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
+    // Prepare the request payload for Gemini API
+    // Include systemInstruction if provided
+    const geminiPayload: any = {
+      contents: body.contents,
+      tools: body.tools
+    };
+
+    // Add system instruction if provided
+    if (body.systemInstruction) {
+      geminiPayload.systemInstruction = body.systemInstruction;
+    }
+
     // Log the payload being sent to Gemini for debugging
-    console.log("Payload to Gemini:", JSON.stringify(body, null, 2));
+    console.log("Payload to Gemini:", JSON.stringify(geminiPayload, null, 2));
 
     const geminiRes = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(geminiPayload),
     });
 
     const geminiData = await geminiRes.json();

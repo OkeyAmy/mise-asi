@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs, sanitizeDataForDisplay } from "./handlerUtils";
 
@@ -27,16 +26,42 @@ export const handleInventoryFunctions = async (
     try {
       if (onGetInventory) {
         const inventoryItems = await onGetInventory();
-        const sanitizedData = sanitizeDataForDisplay(inventoryItems);
         addThoughtStep(
-          "🔨 Preparing to call function: getInventory",
-          JSON.stringify(sanitizedData, null, 2),
+          "🔨 Retrieving current inventory data",
+          "Loading all available ingredients and quantities",
           "completed"
         );
+        
         if (inventoryItems.length > 0) {
-          funcResultMsg = "Here is your current inventory:\n" + inventoryItems.map(item => `- ${item.quantity} ${item.unit} of ${item.item_name}`).join('\n');
+          const sanitizedData = sanitizeDataForDisplay(inventoryItems);
+          
+          // Organize items by category for better readability
+          const itemsByCategory: { [key: string]: any[] } = {};
+          sanitizedData.forEach((item: any) => {
+            const category = item.category || 'Other';
+            if (!itemsByCategory[category]) {
+              itemsByCategory[category] = [];
+            }
+            itemsByCategory[category].push(item);
+          });
+
+          let inventoryDetails = "Current pantry and refrigerator inventory:\n\n";
+          
+          for (const [category, items] of Object.entries(itemsByCategory)) {
+            inventoryDetails += `**${category}:**\n`;
+            items.forEach(item => {
+              inventoryDetails += `- ${item.quantity} ${item.unit} of ${item.item_name}`;
+              if (item.location) inventoryDetails += ` (stored in ${item.location})`;
+              if (item.notes) inventoryDetails += ` - Notes: ${item.notes}`;
+              inventoryDetails += '\n';
+            });
+            inventoryDetails += '\n';
+          }
+          
+          inventoryDetails += "Use these ingredients to suggest meals that maximize the use of available items and minimize food waste.";
+          funcResultMsg = inventoryDetails;
         } else {
-          funcResultMsg = "Your inventory is currently empty.";
+          funcResultMsg = "The pantry and refrigerator are currently empty. The user will need to go shopping before you can suggest meals based on available ingredients. Ask them what they'd like to cook and help them create a shopping list.";
         }
       } else {
         funcResultMsg = "Inventory function is not available right now.";

@@ -1,7 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Content } from "@google/generative-ai";
 import { tools } from '@/lib/gemini/tools';
+import { getSystemPrompt } from '@/lib/prompts/systemPrompt';
 
 export async function callGeminiProxy(history: Content[]) {
     // The Gemini REST API expects snake_case for its keys (e.g., "function_declarations"),
@@ -19,6 +19,9 @@ export async function callGeminiProxy(history: Content[]) {
         body: { 
             contents: history,
             tools: toolsForProxy,
+            systemInstruction: {
+                parts: [{ text: getSystemPrompt() }]
+            }
         },
     });
 
