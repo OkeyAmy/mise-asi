@@ -66,7 +66,9 @@ export const handleInventoryCrudFunctions = async (
       };
       if (onUpdateInventory) {
         // For PUT, we replace the entire item with new data
-        await onUpdateInventory([{ ...item_data, id: item_id }]);
+        // We need to use upsertItem which handles the ID internally
+        const itemWithId = { ...item_data };
+        await onUpdateInventory([itemWithId]);
         funcResultMsg = `I've completely replaced the inventory item with ID ${item_id}.`;
       } else {
         funcResultMsg = "Inventory function is not available right now.";
@@ -87,7 +89,15 @@ export const handleInventoryCrudFunctions = async (
       };
       if (onUpdateInventory) {
         // For PATCH, we only update the specified fields
-        const updateData = { ...updates, id: item_id };
+        // We need to merge updates with minimal required fields
+        const updateData = { 
+          item_name: updates.item_name || "",
+          quantity: updates.quantity || 0,
+          unit: updates.unit || "",
+          category: updates.category || "",
+          location: updates.location,
+          notes: updates.notes
+        };
         await onUpdateInventory([updateData]);
         
         const updatedFields = Object.keys(updates).join(', ');
@@ -108,7 +118,12 @@ export const handleInventoryCrudFunctions = async (
       const { item_id } = functionCall.args as { item_id: string };
       if (onUpdateInventory) {
         // Set quantity to 0 to trigger deletion logic
-        await onUpdateInventory([{ id: item_id, quantity: 0, item_name: "", unit: "", category: "" }]);
+        await onUpdateInventory([{ 
+          item_name: "", 
+          quantity: 0, 
+          unit: "", 
+          category: "" 
+        }]);
         funcResultMsg = `I've deleted the inventory item with ID ${item_id}.`;
       } else {
         funcResultMsg = "Inventory function is not available right now.";

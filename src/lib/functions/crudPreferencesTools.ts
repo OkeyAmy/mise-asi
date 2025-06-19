@@ -24,13 +24,13 @@ export const createUserPreferencesTool: FunctionDeclaration = {
       swap_preferences: {
         type: SchemaType.OBJECT,
         properties: {
-          swap_frequency: { type: SchemaType.STRING, enum: ["low", "medium", "high"] },
+          swap_frequency: { type: SchemaType.STRING, description: "Frequency preference: low, medium, or high" },
           preferred_cuisines: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           disliked_ingredients: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
         }
       },
       notes: { type: SchemaType.STRING, description: "Additional notes." },
-      key_info: { type: SchemaType.OBJECT,  description: "Important user details." }
+      key_info: { type: SchemaType.OBJECT, properties: {}, description: "Important user details." }
     },
   },
 };
@@ -49,13 +49,13 @@ export const replaceUserPreferencesTool: FunctionDeclaration = {
       swap_preferences: {
         type: SchemaType.OBJECT,
         properties: {
-          swap_frequency: { type: SchemaType.STRING, enum: ["low", "medium", "high"] },
+          swap_frequency: { type: SchemaType.STRING, description: "Frequency preference: low, medium, or high" },
           preferred_cuisines: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           disliked_ingredients: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
         }
       },
       notes: { type: SchemaType.STRING, description: "Additional notes." },
-      key_info: { type: SchemaType.OBJECT, description: "Important user details." }
+      key_info: { type: SchemaType.OBJECT, properties: {}, description: "Important user details." }
     },
   },
 };
@@ -74,13 +74,13 @@ export const updateUserPreferencesPartialTool: FunctionDeclaration = {
       swap_preferences: {
         type: SchemaType.OBJECT,
         properties: {
-          swap_frequency: { type: SchemaType.STRING, enum: ["low", "medium", "high"] },
+          swap_frequency: { type: SchemaType.STRING, description: "Frequency preference: low, medium, or high" },
           preferred_cuisines: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           disliked_ingredients: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
         }
       },
       notes: { type: SchemaType.STRING, description: "Optional. Additional notes." },
-      key_info: { type: SchemaType.OBJECT, description: "Optional. Important user details." }
+      key_info: { type: SchemaType.OBJECT, properties: {}, description: "Optional. Important user details." }
     },
   },
 };

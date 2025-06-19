@@ -7,7 +7,41 @@ import { showShoppingListTool, getShoppingListTool, addToShoppingListTool, remov
 import { getCurrentTimeTool } from '../functions/utilityTools';
 import { updateUserNotesTool } from '../functions/notesTools';
 
+// Import CRUD tools
+import { 
+  getInventoryItemsTool, 
+  createInventoryItemsTool, 
+  replaceInventoryItemTool, 
+  updateInventoryItemTool, 
+  deleteInventoryItemTool 
+} from '../functions/crudInventoryTools';
+
+import { 
+  getShoppingListItemsTool, 
+  createShoppingListItemsTool, 
+  replaceShoppingListTool, 
+  updateShoppingListItemTool, 
+  deleteShoppingListItemsTool 
+} from '../functions/crudShoppingListTools';
+
+import { 
+  getUserPreferencesDataTool, 
+  createUserPreferencesTool, 
+  replaceUserPreferencesTool, 
+  updateUserPreferencesPartialTool, 
+  deleteUserPreferenceFieldsTool 
+} from '../functions/crudPreferencesTools';
+
+import { 
+  getLeftoverItemsTool, 
+  createLeftoverItemsTool, 
+  replaceLeftoverItemTool, 
+  updateLeftoverItemPartialTool, 
+  deleteLeftoverItemTool 
+} from '../functions/crudLeftoversTools';
+
 export const tools = [{ functionDeclarations: [
+    // Original tools
     suggestMealTool,
     showShoppingListTool, 
     updateInventoryTool, 
@@ -25,4 +59,32 @@ export const tools = [{ functionDeclarations: [
     removeLeftoverTool,
     showLeftoversTool,
     updateUserNotesTool,
+    
+    // CRUD tools for Inventory
+    getInventoryItemsTool,
+    createInventoryItemsTool,
+    replaceInventoryItemTool,
+    updateInventoryItemTool,
+    deleteInventoryItemTool,
+    
+    // CRUD tools for Shopping List
+    getShoppingListItemsTool,
+    createShoppingListItemsTool,
+    replaceShoppingListTool,
+    updateShoppingListItemTool,
+    deleteShoppingListItemsTool,
+    
+    // CRUD tools for Preferences
+    getUserPreferencesDataTool,
+    createUserPreferencesTool,
+    replaceUserPreferencesTool,
+    updateUserPreferencesPartialTool,
+    deleteUserPreferenceFieldsTool,
+    
+    // CRUD tools for Leftovers
+    getLeftoverItemsTool,
+    createLeftoverItemsTool,
+    replaceLeftoverItemTool,
+    updateLeftoverItemPartialTool,
+    deleteLeftoverItemTool,
 ] }];
