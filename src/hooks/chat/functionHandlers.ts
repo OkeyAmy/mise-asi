@@ -7,6 +7,10 @@ import { handlePreferenceFunctions } from "./handlers/preferenceHandlers";
 import { handleShoppingListFunctions } from "./handlers/shoppingListHandlers";
 import { handleUtilityFunctions } from "./handlers/utilityHandlers";
 import { handleNotesFunctions } from "./handlers/notesHandlers";
+import { handleInventoryCrudFunctions } from "./handlers/crudInventoryHandlers";
+import { handleShoppingListCrudFunctions } from "./handlers/crudShoppingListHandlers";
+import { handlePreferencesCrudFunctions } from "./handlers/crudPreferencesHandlers";
+import { handleLeftoversCrudFunctions } from "./handlers/crudLeftoversHandlers";
 
 // Function handler mapping - each function is handled independently and can be called in parallel
 const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: FunctionHandlerArgs) => Promise<string> } = {
@@ -28,6 +32,34 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
   getUserPreferences: handlePreferenceFunctions,
   updateUserPreferences: handlePreferenceFunctions,
   updateUserNotes: handleNotesFunctions,
+
+  // New CRUD handlers for Inventory
+  getInventoryItems: handleInventoryCrudFunctions,
+  createInventoryItems: handleInventoryCrudFunctions,
+  replaceInventoryItem: handleInventoryCrudFunctions,
+  updateInventoryItem: handleInventoryCrudFunctions,
+  deleteInventoryItem: handleInventoryCrudFunctions,
+
+  // New CRUD handlers for Shopping List
+  getShoppingListItems: handleShoppingListCrudFunctions,
+  createShoppingListItems: handleShoppingListCrudFunctions,
+  replaceShoppingList: handleShoppingListCrudFunctions,
+  updateShoppingListItem: handleShoppingListCrudFunctions,
+  deleteShoppingListItems: handleShoppingListCrudFunctions,
+
+  // New CRUD handlers for Preferences
+  getUserPreferencesData: handlePreferencesCrudFunctions,
+  createUserPreferences: handlePreferencesCrudFunctions,
+  replaceUserPreferences: handlePreferencesCrudFunctions,
+  updateUserPreferencesPartial: handlePreferencesCrudFunctions,
+  deleteUserPreferenceFields: handlePreferencesCrudFunctions,
+
+  // New CRUD handlers for Leftovers
+  getLeftoverItems: handleLeftoversCrudFunctions,
+  createLeftoverItems: handleLeftoversCrudFunctions,
+  replaceLeftoverItem: handleLeftoversCrudFunctions,
+  updateLeftoverItemPartial: handleLeftoversCrudFunctions,
+  deleteLeftoverItem: handleLeftoversCrudFunctions,
 };
 
 /**
@@ -35,7 +67,7 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
  * Multiple functions can be called simultaneously via Promise.all() in useChat.ts
  * 
  * @param functionCall - The function call from Gemini
- * @param args - Arguments including data handlers and UI updaters
+ * @param args - Arguments including data handlers and UI updarters
  * @returns Promise<string> - Result message that will be sent back to the LLM
  */
 export const handleFunctionCall = async (
