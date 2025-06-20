@@ -1,11 +1,10 @@
-
 import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Download, Share2, Edit, Check, X, Eye } from "lucide-react";
+import { Download, Share2, Edit, Check, X, Eye, Copy, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -17,21 +16,37 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { AmazonProductView } from "./AmazonProductView";
+import { useSharedShoppingList } from "@/hooks/useSharedShoppingList";
+import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 interface ShoppingListProps {
   items: ShoppingListItem[];
   onRemove: (item: string) => void;
   onUpdate?: (itemName: string, quantity: number, unit: string) => void;
   isLoading?: boolean;
+  session?: Session | null;
 }
 
-export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingListProps) => {
+export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: ShoppingListProps) => {
   const [checkedItems, setCheckedItems] = React.useState<Set<string>>(new Set());
   const [itemToRemove, setItemToRemove] = React.useState<ShoppingListItem | null>(null);
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<{ quantity: number; unit: string }>({ quantity: 0, unit: "" });
   const [viewingProduct, setViewingProduct] = React.useState<string | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  const [shareUrl, setShareUrl] = React.useState<string>("");
+  
+  const { createShareableLink, isCreating } = useSharedShoppingList(session);
+  const { toast } = useToast();
 
   const handleCheckedChange = (checked: boolean, item: ShoppingListItem) => {
     if (checked) {
@@ -92,22 +107,67 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
   };
 
   const handleShare = async () => {
-    const listContent = formatShoppingList();
-    if (navigator.share) {
+    if (items.length === 0) {
+      toast({
+        title: "Nothing to share",
+        description: "Your shopping list is empty.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (navigator.share && !shareDialogOpen) {
+      // Use native sharing if available
       try {
+        const listContent = formatShoppingList();
         await navigator.share({
           title: 'My Shopping List',
           text: listContent,
         });
       } catch (error) {
         console.error('Error sharing:', error);
+        // Fall back to shareable link
+        await createAndShowShareLink();
       }
     } else {
-      alert('Sharing is not supported on this browser. You can download the list instead.');
+      // Create shareable link
+      await createAndShowShareLink();
     }
   };
 
-  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+  const createAndShowShareLink = async () => {
+    try {
+      const { shareUrl: url } = await createShareableLink(items, "My Shopping List");
+      setShareUrl(url);
+      setShareDialogOpen(true);
+    } catch (error) {
+      console.error('Error creating shareable link:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create shareable link. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const copyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Copied!",
+        description: "Share link copied to clipboard.",
+      });
+    } catch (error) {
+      console.error('Error copying to clipboard:', error);
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const canShare = typeof navigator !== 'undefined' && (!!navigator.share || session?.user);
 
   return (
     <>
@@ -215,8 +275,18 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
               <Download className="mr-2 h-4 w-4" /> Download
             </Button>
             {canShare && (
-              <Button variant="outline" className="w-full" onClick={handleShare}>
-                <Share2 className="mr-2 h-4 w-4" /> Share
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleShare}
+                disabled={isCreating}
+              >
+                {isCreating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="mr-2 h-4 w-4" />
+                )}
+                Share
               </Button>
             )}
           </div>
@@ -237,6 +307,32 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Your Shopping List</DialogTitle>
+            <DialogDescription>
+              Anyone with this link can import your shopping list items. The link expires in 7 days.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Input 
+                value={shareUrl} 
+                readOnly 
+                className="flex-1"
+              />
+              <Button onClick={copyShareUrl} size="sm">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              When someone opens this link, they'll be able to add these items to their own shopping list and get AI suggestions for what to do with them.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AmazonProductView 
         isOpen={!!viewingProduct}

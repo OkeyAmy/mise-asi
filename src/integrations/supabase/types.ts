@@ -168,6 +168,36 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_shopping_lists: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          items: Json
+          share_token: string
+          shared_by_user_id: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          share_token: string
+          shared_by_user_id: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          items?: Json
+          share_token?: string
+          shared_by_user_id?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       shopping_lists: {
         Row: {
           created_at: string
