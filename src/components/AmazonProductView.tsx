@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Star, ExternalLink, Package } from "lucide-react";
-import { getAmazonSearchCache } from "@/hooks/chat/handlers/amazonSearchHandlers";
+import { Star, ExternalLink, Package, Trash2 } from "lucide-react";
+import { getAmazonSearchCache, deleteCachedResults } from "@/hooks/chat/handlers/amazonSearchHandlers";
+import { toast } from "sonner";
 
 interface AmazonProduct {
   title: string;
@@ -27,16 +28,36 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
   const [products, setProducts] = React.useState<AmazonProduct[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  React.useEffect(() => {
+  const loadProducts = React.useCallback(async () => {
     if (isOpen && productName) {
       setIsLoading(true);
-      const cache = getAmazonSearchCache();
-      const cacheKey = `${productName.toLowerCase()}_US`;
-      const cachedProducts = cache.get(cacheKey) || [];
-      setProducts(cachedProducts);
-      setIsLoading(false);
+      try {
+        const cachedProducts = await getAmazonSearchCache(productName);
+        setProducts(cachedProducts);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        toast.error('Failed to load Amazon products');
+      } finally {
+        setIsLoading(false);
+      }
     }
   }, [isOpen, productName]);
+
+  React.useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const handleRemoveFromCache = async () => {
+    try {
+      await deleteCachedResults(productName);
+      toast.success(`Removed ${productName} from Amazon cache`);
+      setProducts([]);
+      onClose();
+    } catch (error) {
+      console.error('Error removing from cache:', error);
+      toast.error('Failed to remove from cache');
+    }
+  };
 
   const renderStars = (rating: number) => {
     const stars = [];
@@ -63,9 +84,22 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Amazon Results for "{productName}"
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Amazon Results for "{productName}"
+            </div>
+            {products.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveFromCache}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Remove from Cache
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
         

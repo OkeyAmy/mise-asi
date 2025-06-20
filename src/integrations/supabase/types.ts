@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      amazon_search_cache: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          product_query: string
+          search_results: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          country?: string
+          created_at?: string
+          id?: string
+          product_query: string
+          search_results: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          product_query?: string
+          search_results?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_sessions: {
         Row: {
           created_at: string

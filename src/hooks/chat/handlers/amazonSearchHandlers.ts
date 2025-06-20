@@ -3,9 +3,6 @@ import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
 
-// In-memory cache for Amazon search results
-const amazonSearchCache = new Map<string, any[]>();
-
 // Get RapidAPI key from Supabase secrets
 const getRapidAPIKey = async (): Promise<string> => {
   const { data, error } = await supabase.functions.invoke('get-secret', {
@@ -52,6 +49,7 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
     }
     
     const data = await response.json();
+    console.log('🔍 Amazon API Response:', data);
     
     if (!data.data || !data.data.products) {
       throw new Error('Invalid response format from Amazon API');
@@ -61,6 +59,65 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
   } catch (error) {
     console.error("Amazon API search failed:", error);
     throw error;
+  }
+};
+
+// Database operations for Amazon search cache
+const getCachedSearchResults = async (productQuery: string, country: string = "US") => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return null;
+
+  const { data, error } = await supabase
+    .from('amazon_search_cache')
+    .select('*')
+    .eq('user_id', user.user.id)
+    .eq('product_query', productQuery.toLowerCase())
+    .eq('country', country)
+    .single();
+
+  if (error) {
+    console.log('No cached results found:', error);
+    return null;
+  }
+
+  return data;
+};
+
+const saveCachedSearchResults = async (productQuery: string, searchResults: any[], country: string = "US") => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return;
+
+  const { error } = await supabase
+    .from('amazon_search_cache')
+    .upsert({
+      user_id: user.user.id,
+      product_query: productQuery.toLowerCase(),
+      country: country,
+      search_results: searchResults
+    });
+
+  if (error) {
+    console.error('Error saving cache:', error);
+  } else {
+    console.log('✅ Cached search results for:', productQuery);
+  }
+};
+
+const deleteCachedSearchResults = async (productQuery: string, country: string = "US") => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return;
+
+  const { error } = await supabase
+    .from('amazon_search_cache')
+    .delete()
+    .eq('user_id', user.user.id)
+    .eq('product_query', productQuery.toLowerCase())
+    .eq('country', country);
+
+  if (error) {
+    console.error('Error deleting cache:', error);
+  } else {
+    console.log('🗑️ Deleted cached results for:', productQuery);
   }
 };
 
@@ -80,16 +137,16 @@ export const handleAmazonSearchFunctions = async (
       
       addThoughtStep(`🛍️ Searching Amazon for: ${product_query}`);
       
-      // Check cache first
-      const cacheKey = `${product_query.toLowerCase()}_${country}`;
-      if (amazonSearchCache.has(cacheKey)) {
+      // Check database cache first
+      const cachedData = await getCachedSearchResults(product_query, country);
+      if (cachedData) {
         addThoughtStep(`📋 Using cached results for ${product_query}`);
-        const cachedResults = amazonSearchCache.get(cacheKey);
+        const cachedResults = cachedData.search_results;
         funcResultMsg = `Found ${cachedResults?.length || 0} cached Amazon results for "${product_query}". Results are ready to display.`;
       } else {
         // Perform search and cache results
         const searchResults = await searchAmazonAPI(product_query, country);
-        amazonSearchCache.set(cacheKey, searchResults);
+        await saveCachedSearchResults(product_query, searchResults, country);
         
         funcResultMsg = `Found ${searchResults.length} Amazon products for "${product_query}". Top result: ${searchResults[0]?.title} at ${searchResults[0]?.price}. Results cached for quick access.`;
         addThoughtStep(`✅ Found ${searchResults.length} products for ${product_query}`);
@@ -113,12 +170,12 @@ export const handleAmazonSearchFunctions = async (
       let failedCount = 0;
       
       for (const productQuery of product_queries) {
-        const cacheKey = `${productQuery.toLowerCase()}_${country}`;
+        const cachedData = await getCachedSearchResults(productQuery, country);
         
-        if (!amazonSearchCache.has(cacheKey)) {
+        if (!cachedData) {
           try {
             const searchResults = await searchAmazonAPI(productQuery, country);
-            amazonSearchCache.set(cacheKey, searchResults);
+            await saveCachedSearchResults(productQuery, searchResults, country);
             searchedCount++;
             
             // Add small delay to avoid rate limiting
@@ -148,30 +205,75 @@ export const handleAmazonSearchFunctions = async (
     const { product_name } = functionCall.args as { product_name?: string };
     
     if (product_name) {
-      const cacheKey = `${product_name.toLowerCase()}_US`;
-      const results = amazonSearchCache.get(cacheKey);
+      const cachedData = await getCachedSearchResults(product_name);
       
-      if (results) {
+      if (cachedData) {
+        const results = cachedData.search_results;
         funcResultMsg = `Found ${results.length} Amazon results for "${product_name}". Ready to display product details including prices ranging from ${results[results.length-1]?.price} to ${results[0]?.price}.`;
       } else {
         funcResultMsg = `No cached Amazon results found for "${product_name}". Try searching for this product first.`;
       }
     } else {
-      const totalCached = amazonSearchCache.size;
-      funcResultMsg = `Currently have Amazon search results cached for ${totalCached} different products from your shopping list.`;
+      const { data: user } = await supabase.auth.getUser();
+      if (user.user) {
+        const { data: cachedResults } = await supabase
+          .from('amazon_search_cache')
+          .select('product_query')
+          .eq('user_id', user.user.id);
+        
+        const totalCached = cachedResults?.length || 0;
+        funcResultMsg = `Currently have Amazon search results cached for ${totalCached} different products from your shopping list.`;
+      }
     }
     
     addThoughtStep(`📋 Retrieved Amazon search cache data`);
   } else if (functionCall.name === "clearAmazonSearchCache") {
-    const previousSize = amazonSearchCache.size;
-    amazonSearchCache.clear();
+    const { data: user } = await supabase.auth.getUser();
+    if (user.user) {
+      const { data: cachedResults } = await supabase
+        .from('amazon_search_cache')
+        .select('id')
+        .eq('user_id', user.user.id);
+      
+      const previousSize = cachedResults?.length || 0;
+      
+      const { error } = await supabase
+        .from('amazon_search_cache')
+        .delete()
+        .eq('user_id', user.user.id);
+      
+      if (error) {
+        funcResultMsg = `Failed to clear Amazon search cache: ${error.message}`;
+      } else {
+        funcResultMsg = `Cleared ${previousSize} cached Amazon search results. Fresh searches will be performed for future product lookups.`;
+      }
+    }
     
-    funcResultMsg = `Cleared ${previousSize} cached Amazon search results. Fresh searches will be performed for future product lookups.`;
     addThoughtStep(`🗑️ Cleared Amazon search cache`);
   }
 
   return funcResultMsg;
 };
 
-// Export the cache for potential use in UI components
-export const getAmazonSearchCache = () => amazonSearchCache;
+// Export function to get cached results for UI components
+export const getAmazonSearchCache = async (productName?: string) => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return [];
+
+  if (productName) {
+    const cachedData = await getCachedSearchResults(productName);
+    return cachedData?.search_results || [];
+  }
+
+  const { data: allCached } = await supabase
+    .from('amazon_search_cache')
+    .select('*')
+    .eq('user_id', user.user.id);
+
+  return allCached || [];
+};
+
+// Export function to delete cached results from UI
+export const deleteCachedResults = async (productName: string) => {
+  await deleteCachedSearchResults(productName);
+};
