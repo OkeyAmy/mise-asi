@@ -1,10 +1,11 @@
+
 import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Download, Share2, Edit, Check, X } from "lucide-react";
+import { Download, Share2, Edit, Check, X, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -16,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+import { AmazonProductView } from "./AmazonProductView";
 
 interface ShoppingListProps {
   items: ShoppingListItem[];
@@ -29,6 +31,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
   const [itemToRemove, setItemToRemove] = React.useState<ShoppingListItem | null>(null);
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
   const [editValues, setEditValues] = React.useState<{ quantity: number; unit: string }>({ quantity: 0, unit: "" });
+  const [viewingProduct, setViewingProduct] = React.useState<string | null>(null);
 
   const handleCheckedChange = (checked: boolean, item: ShoppingListItem) => {
     if (checked) {
@@ -63,6 +66,10 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
 
   const handleEditCancel = () => {
     setEditingItem(null);
+  };
+
+  const handleViewProduct = (productName: string) => {
+    setViewingProduct(productName);
   };
 
   const formatShoppingList = () => {
@@ -108,7 +115,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
         <CardHeader>
           <CardTitle>Your Smart Shopping List</CardTitle>
           <CardDescription>
-            Only items you need for your meal plan are listed here. Click edit to adjust quantities.
+            Only items you need for your meal plan are listed here. Click edit to adjust quantities or view to see Amazon options.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,16 +177,28 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
                       <div className="text-sm text-muted-foreground">
                         {item.quantity} {item.unit}
                       </div>
-                      {onUpdate && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity">
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          onClick={() => handleEditStart(item)}
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+                          onClick={() => handleViewProduct(item.item)}
+                          className="h-8 w-8 p-0"
+                          title="View on Amazon"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Eye className="h-4 w-4 text-blue-600" />
                         </Button>
-                      )}
+                        {onUpdate && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleEditStart(item)}
+                            className="h-8 w-8 p-0"
+                            title="Edit quantity"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -203,6 +222,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
           </div>
         </CardContent>
       </Card>
+      
       <AlertDialog open={!!itemToRemove} onOpenChange={(open) => !open && handleRemoveCancel()}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -217,6 +237,12 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingL
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AmazonProductView 
+        isOpen={!!viewingProduct}
+        onClose={() => setViewingProduct(null)}
+        productName={viewingProduct || ""}
+      />
     </>
   );
 };

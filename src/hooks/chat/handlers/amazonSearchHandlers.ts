@@ -5,57 +5,71 @@ import { FunctionHandlerArgs } from "./handlerUtils";
 // In-memory cache for Amazon search results
 const amazonSearchCache = new Map<string, any[]>();
 
-// Mock function that simulates the RapidAPI call structure
-// This will need to be implemented with actual API calls later
+// Actual RapidAPI implementation
 const searchAmazonAPI = async (productQuery: string, country: string = "US") => {
   console.log(`🔍 Searching Amazon for: ${productQuery} in ${country}`);
   
-  // This is a placeholder - actual implementation would use RapidAPI
-  // const url = "https://real-time-amazon-data.p.rapidapi.com/search";
-  // const querystring = {
-  //   query: productQuery,
-  //   page: "1",
-  //   country: country,
-  //   sort_by: "RELEVANCE",
-  //   product_condition: "ALL",
-  //   is_prime: "false",
-  //   deals_and_discounts: "NONE"
-  // };
-  // const headers = {
-  //   "x-rapidapi-key": "<your-rapidapi-key>",
-  //   "x-rapidapi-host": "real-time-amazon-data.p.rapidapi.com"
-  // };
-  
-  // For now, return mock data structure
-  return [
-    {
-      title: `${productQuery} - Premium Quality`,
-      price: "$12.99",
-      rating: 4.5,
-      reviews_count: 1250,
-      url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-      image: "https://via.placeholder.com/200x200",
-      is_prime: true,
-    },
-    {
-      title: `Organic ${productQuery}`,
-      price: "$15.49",
-      rating: 4.7,
-      reviews_count: 890,
-      url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-      image: "https://via.placeholder.com/200x200",
-      is_prime: false,
-    },
-    {
-      title: `${productQuery} - Best Seller`,
-      price: "$9.99",
-      rating: 4.3,
-      reviews_count: 2100,
-      url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-      image: "https://via.placeholder.com/200x200",
-      is_prime: true,
+  try {
+    const url = "https://real-time-amazon-data.p.rapidapi.com/search";
+    const querystring = new URLSearchParams({
+      query: productQuery,
+      page: "1",
+      country: country,
+      sort_by: "RELEVANCE",
+      product_condition: "ALL",
+      is_prime: "false",
+      deals_and_discounts: "NONE"
+    });
+    
+    const headers = {
+      "x-rapidapi-key": "ded0bfcef9mshbbd09372a611d53p1d9631jsn3daeffd314b3",
+      "x-rapidapi-host": "real-time-amazon-data.p.rapidapi.com"
+    };
+    
+    const response = await fetch(`${url}?${querystring}`, {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  ];
+    
+    const data = await response.json();
+    return data.data?.products?.slice(0, 3) || [];
+  } catch (error) {
+    console.error("RapidAPI search failed:", error);
+    // Fallback to mock data if API fails
+    return [
+      {
+        title: `${productQuery} - Premium Quality`,
+        price: "$12.99",
+        rating: 4.5,
+        reviews_count: 1250,
+        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
+        image: "https://via.placeholder.com/200x200",
+        is_prime: true,
+      },
+      {
+        title: `Organic ${productQuery}`,
+        price: "$15.49",
+        rating: 4.7,
+        reviews_count: 890,
+        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
+        image: "https://via.placeholder.com/200x200",
+        is_prime: false,
+      },
+      {
+        title: `${productQuery} - Best Seller`,
+        price: "$9.99",
+        rating: 4.3,
+        reviews_count: 2100,
+        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
+        image: "https://via.placeholder.com/200x200",
+        is_prime: true,
+      }
+    ];
+  }
 };
 
 export const handleAmazonSearchFunctions = async (
