@@ -3,15 +3,11 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ShoppingListItem } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
+import { validateShareToken, checkRateLimit, generateSecureToken } from "@/utils/securityValidation";
 
 export function useSharedShoppingList(session: Session | null) {
   const [isCreating, setIsCreating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-
-  // Generate a random share token
-  const generateShareToken = () => {
-    return Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-  };
 
   // Create a shareable link for shopping list items
   const createShareableLink = useCallback(async (items: ShoppingListItem[], title?: string) => {
@@ -19,9 +15,14 @@ export function useSharedShoppingList(session: Session | null) {
       throw new Error("No items to share or user not authenticated");
     }
 
+    // Rate limiting check
+    if (!checkRateLimit(`create_share_${session.user.id}`, 10, 60000)) {
+      throw new Error("Too many share attempts. Please try again later.");
+    }
+
     setIsCreating(true);
     try {
-      const shareToken = generateShareToken();
+      const shareToken = generateSecureToken(32);
       
       const { data, error } = await supabase
         .from("shared_shopping_lists")
@@ -43,17 +44,48 @@ export function useSharedShoppingList(session: Session | null) {
     }
   }, [session]);
 
-  // Get shared shopping list by token
+  // Get shared shopping list by token with security checks
   const getSharedList = useCallback(async (shareToken: string) => {
-    const { data, error } = await supabase
-      .from("shared_shopping_lists")
-      .select("*")
-      .eq("share_token", shareToken)
-      .gt("expires_at", new Date().toISOString())
-      .single();
+    // Validate token format
+    if (!validateShareToken(shareToken)) {
+      throw new Error("Invalid share token format");
+    }
 
-    if (error) throw error;
-    return data;
+    // Rate limiting for access attempts
+    if (!checkRateLimit(`access_share_${shareToken}`, 20, 60000)) {
+      throw new Error("Too many access attempts. Please try again later.");
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("shared_shopping_lists")
+        .select("*")
+        .eq("share_token", shareToken)
+        .gt("expires_at", new Date().toISOString())
+        .single();
+
+      if (error) {
+        // Log access attempt for security monitoring
+        console.warn('Failed shared list access attempt:', { shareToken, error: error.message });
+        throw error;
+      }
+
+      // Log successful access for audit trail
+      await supabase
+        .from("shared_list_access_log")
+        .insert({
+          share_token: shareToken,
+          ip_address: '0.0.0.0', // Would need server-side implementation for real IP
+          user_agent: navigator.userAgent
+        })
+        .select()
+        .single();
+
+      return data;
+    } catch (error) {
+      console.error('Error accessing shared list:', error);
+      throw error;
+    }
   }, []);
 
   // Import shared items to user's shopping list
