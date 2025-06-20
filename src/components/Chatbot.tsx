@@ -57,9 +57,7 @@ export const Chatbot = ({
     resetConversation,
   } = useChat({
     setPlan,
-    isShoppingListOpen,
     setIsShoppingListOpen,
-    isLeftoversOpen,
     setIsLeftoversOpen,
     isAmazonProductViewOpen,
     setIsAmazonProductViewOpen,

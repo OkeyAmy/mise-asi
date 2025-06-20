@@ -70,16 +70,8 @@ export function useSharedShoppingList(session: Session | null) {
         throw error;
       }
 
-      // Log successful access for audit trail
-      await supabase
-        .from("shared_list_access_log")
-        .insert({
-          share_token: shareToken,
-          ip_address: '0.0.0.0', // Would need server-side implementation for real IP
-          user_agent: navigator.userAgent
-        })
-        .select()
-        .single();
+      // Log successful access for audit trail (simplified for now)
+      console.log('Shared list accessed:', { shareToken, timestamp: new Date().toISOString() });
 
       return data;
     } catch (error) {

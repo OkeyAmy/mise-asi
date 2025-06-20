@@ -27,16 +27,22 @@ export function useUserRoles(session: Session | null) {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id);
+      // Use rpc to call a function that can access the user_roles table
+      const { data, error } = await supabase.rpc('get_user_roles', {
+        p_user_id: session.user.id
+      });
 
-      if (error) throw error;
-      
-      setUserRoles(data?.map(item => item.role as UserRole) || []);
+      if (error) {
+        console.error('Error fetching user roles:', error);
+        // Fallback: assume user role for now
+        setUserRoles(['user']);
+      } else {
+        setUserRoles(data || ['user']);
+      }
     } catch (error) {
       console.error('Error fetching user roles:', error);
+      // Fallback: assume user role for now
+      setUserRoles(['user']);
     } finally {
       setIsLoading(false);
     }
