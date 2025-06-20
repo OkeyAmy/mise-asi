@@ -1,3 +1,4 @@
+
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,7 +193,7 @@ const deleteProductFromCache = async (productQuery: string, asin: string, countr
     return;
   }
 
-  const currentResults = cachedData.extracted_products as AmazonProduct[];
+  const currentResults = (cachedData.extracted_products as unknown as AmazonProduct[]) || [];
   
   // Filter out the product with the specified ASIN
   const updatedResults = currentResults.filter(product => product.asin !== asin);
@@ -241,7 +242,7 @@ export const handleAmazonSearchFunctions = async (
       const cachedData = await getCachedSearchResults(product_query, country);
       if (cachedData) {
         addThoughtStep(`📋 Using cached results for ${product_query}`);
-        const cachedResults = cachedData.search_results as AmazonProduct[];
+        const cachedResults = cachedData.search_results as unknown as AmazonProduct[];
         funcResultMsg = `Found ${cachedResults?.length || 0} cached Amazon results for "${product_query}". Results are ready to display.`;
       } else {
         // Perform search and cache results
@@ -313,7 +314,7 @@ export const handleAmazonSearchFunctions = async (
       const cachedData = await getCachedSearchResults(product_name);
       
       if (cachedData) {
-        const results = cachedData.search_results as AmazonProduct[];
+        const results = cachedData.search_results as unknown as AmazonProduct[];
         const highestPrice = results[0]?.product_price || 'N/A';
         const lowestPrice = results[results.length-1]?.product_price || 'N/A';
         funcResultMsg = `Found ${results.length} Amazon results for "${product_name}". Ready to display product details including prices ranging from ${lowestPrice} to ${highestPrice}.`;
@@ -381,7 +382,7 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
       return [];
     }
     
-    const extractedProducts = cachedData.extracted_products as AmazonProduct[];
+    const extractedProducts = (cachedData.extracted_products as unknown as AmazonProduct[]) || [];
     console.log(`Found ${extractedProducts.length} cached products for: ${productName}`);
     return extractedProducts;
   }
@@ -401,7 +402,8 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
   const allResults: AmazonProduct[] = [];
   allCached.forEach((cache: any) => {
     if (cache.extracted_products && Array.isArray(cache.extracted_products)) {
-      allResults.push(...(cache.extracted_products as AmazonProduct[]));
+      const products = cache.extracted_products as unknown as AmazonProduct[];
+      allResults.push(...products);
     }
   });
   
