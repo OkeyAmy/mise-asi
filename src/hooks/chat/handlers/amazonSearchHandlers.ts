@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,7 @@ interface AmazonProduct {
   is_prime?: boolean;
   sales_volume?: string;
   delivery?: string;
+  product_availability?: string;
   product_availability?: string;
   climate_pledge_friendly?: boolean;
   has_variations?: boolean;
@@ -174,52 +174,73 @@ const deleteCachedSearchResults = async (productQuery: string, country: string =
   }
 };
 
-// Updated function to delete individual product from cache using extracted_products
-const deleteProductFromCache = async (productQuery: string, asin: string, country: string = "US") => {
+// New function to search cached Amazon data by product name
+const searchCachedAmazonData = async (productName: string, country: string = "US"): Promise<AmazonProduct[]> => {
   const { data: user } = await supabase.auth.getUser();
-  if (!user.user) return;
+  if (!user.user) return [];
 
-  // Get current cached results
-  const { data: cachedData, error: fetchError } = await supabase
+  // Get all cached Amazon data for the user
+  const { data: allCached, error } = await supabase
+    .from('amazon_search_cache')
+    .select('extracted_products, product_query')
+    .eq('user_id', user.user.id)
+    .eq('country', country);
+
+  if (error || !allCached) {
+    console.error('Error fetching cached Amazon data:', error);
+    return [];
+  }
+
+  // Search through all cached products for matches
+  const matchingProducts: AmazonProduct[] = [];
+  const searchTerm = productName.toLowerCase();
+
+  allCached.forEach((cache: any) => {
+    if (cache.extracted_products && Array.isArray(cache.extracted_products)) {
+      const products = cache.extracted_products as unknown as AmazonProduct[];
+      products.forEach((product: AmazonProduct) => {
+        // Search in product title, byline, and original query
+        const titleMatch = product.product_title?.toLowerCase().includes(searchTerm);
+        const bylineMatch = product.product_byline?.toLowerCase().includes(searchTerm);
+        const queryMatch = cache.product_query?.toLowerCase().includes(searchTerm);
+        
+        if (titleMatch || bylineMatch || queryMatch) {
+          matchingProducts.push(product);
+        }
+      });
+    }
+  });
+
+  console.log(`Found ${matchingProducts.length} matching products for search: ${productName}`);
+  return matchingProducts;
+};
+
+// Get all Amazon products for a user across all searches
+const getAllCachedAmazonProducts = async (country: string = "US"): Promise<AmazonProduct[]> => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return [];
+
+  const { data: allCached, error } = await supabase
     .from('amazon_search_cache')
     .select('extracted_products')
     .eq('user_id', user.user.id)
-    .eq('product_query', productQuery.toLowerCase())
-    .eq('country', country)
-    .single();
+    .eq('country', country);
 
-  if (fetchError || !cachedData) {
-    console.error('Error fetching cached data:', fetchError);
-    return;
+  if (error || !allCached) {
+    console.error('Error fetching all cached Amazon data:', error);
+    return [];
   }
 
-  const currentResults = (cachedData.extracted_products as unknown as AmazonProduct[]) || [];
-  
-  // Filter out the product with the specified ASIN
-  const updatedResults = currentResults.filter(product => product.asin !== asin);
-
-  if (updatedResults.length === 0) {
-    // If no products left, delete the entire cache entry
-    await deleteCachedSearchResults(productQuery, country);
-  } else {
-    // Update both search_results and extracted_products with remaining products
-    const { error } = await supabase
-      .from('amazon_search_cache')
-      .update({
-        search_results: updatedResults as unknown as any,
-        extracted_products: updatedResults as unknown as any,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', user.user.id)
-      .eq('product_query', productQuery.toLowerCase())
-      .eq('country', country);
-
-    if (error) {
-      console.error('Error updating cache:', error);
-    } else {
-      console.log('✅ Removed product from cache:', asin);
+  const allProducts: AmazonProduct[] = [];
+  allCached.forEach((cache: any) => {
+    if (cache.extracted_products && Array.isArray(cache.extracted_products)) {
+      const products = cache.extracted_products as unknown as AmazonProduct[];
+      allProducts.push(...products);
     }
-  }
+  });
+
+  console.log(`Retrieved ${allProducts.length} total cached Amazon products`);
+  return allProducts;
 };
 
 export const handleAmazonSearchFunctions = async (
@@ -308,52 +329,82 @@ export const handleAmazonSearchFunctions = async (
       addThoughtStep(`❌ Batch Amazon search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } else if (functionCall.name === "getAmazonSearchResults") {
-    const { product_name } = functionCall.args as { product_name?: string };
+    const { product_name, search_all } = functionCall.args as { 
+      product_name?: string; 
+      search_all?: boolean;
+    };
     
-    if (product_name) {
-      const cachedData = await getCachedSearchResults(product_name);
-      
-      if (cachedData) {
-        const results = cachedData.search_results as unknown as AmazonProduct[];
-        const highestPrice = results[0]?.product_price || 'N/A';
-        const lowestPrice = results[results.length-1]?.product_price || 'N/A';
-        funcResultMsg = `Found ${results.length} Amazon results for "${product_name}". Ready to display product details including prices ranging from ${lowestPrice} to ${highestPrice}.`;
+    if (search_all) {
+      // Get all Amazon products across all searches
+      const allProducts = await getAllCachedAmazonProducts();
+      if (allProducts.length > 0) {
+        const uniqueProducts = allProducts.filter((product, index, self) => 
+          index === self.findIndex(p => p.asin === product.asin)
+        );
+        funcResultMsg = `Found ${uniqueProducts.length} total Amazon products from all your searches. Products include various categories with prices ranging from budget to premium options. Ready to display detailed product information.`;
       } else {
-        funcResultMsg = `No cached Amazon results found for "${product_name}". Try searching for this product first.`;
+        funcResultMsg = `No Amazon products found in your search history. Try searching for some products first.`;
+      }
+    } else if (product_name) {
+      // Search for specific product name in cached data
+      const matchingProducts = await searchCachedAmazonData(product_name);
+      if (matchingProducts.length > 0) {
+        const uniqueProducts = matchingProducts.filter((product, index, self) => 
+          index === self.findIndex(p => p.asin === product.asin)
+        );
+        funcResultMsg = `Found ${uniqueProducts.length} Amazon products matching "${product_name}" in your cached searches. Products include detailed information like pricing, ratings, and availability. Ready to display results.`;
+      } else {
+        funcResultMsg = `No Amazon products found matching "${product_name}" in your search history. Try searching for this product first or check if the product name is spelled correctly.`;
       }
     } else {
+      // Get summary of all cached searches
       const { data: user } = await supabase.auth.getUser();
       if (user.user) {
         const { data: cachedResults } = await supabase
           .from('amazon_search_cache')
-          .select('product_query')
-          .eq('user_id', user.user.id);
+          .select('product_query, created_at')
+          .eq('user_id', user.user.id)
+          .order('created_at', { ascending: false });
         
         const totalCached = cachedResults?.length || 0;
-        funcResultMsg = `Currently have Amazon search results cached for ${totalCached} different products from your shopping list.`;
+        if (totalCached > 0) {
+          const recentQueries = cachedResults?.slice(0, 3).map(r => r.product_query).join(', ') || '';
+          funcResultMsg = `You have Amazon search results cached for ${totalCached} different product queries. Recent searches include: ${recentQueries}. You can view all products or search for specific items.`;
+        } else {
+          funcResultMsg = `No Amazon search results currently cached. Start by searching for products you're interested in.`;
+        }
       }
     }
     
     addThoughtStep(`📋 Retrieved Amazon search cache data`);
   } else if (functionCall.name === "clearAmazonSearchCache") {
+    const { product_query } = functionCall.args as { product_query?: string };
+    
     const { data: user } = await supabase.auth.getUser();
     if (user.user) {
-      const { data: cachedResults } = await supabase
-        .from('amazon_search_cache')
-        .select('id')
-        .eq('user_id', user.user.id);
-      
-      const previousSize = cachedResults?.length || 0;
-      
-      const { error } = await supabase
-        .from('amazon_search_cache')
-        .delete()
-        .eq('user_id', user.user.id);
-      
-      if (error) {
-        funcResultMsg = `Failed to clear Amazon search cache: ${error.message}`;
+      if (product_query) {
+        // Delete specific product query cache
+        await deleteCachedSearchResults(product_query);
+        funcResultMsg = `Cleared Amazon search cache for "${product_query}". This specific search data has been removed from your cache.`;
       } else {
-        funcResultMsg = `Cleared ${previousSize} cached Amazon search results. Fresh searches will be performed for future product lookups.`;
+        // Delete all cached results
+        const { data: cachedResults } = await supabase
+          .from('amazon_search_cache')
+          .select('id')
+          .eq('user_id', user.user.id);
+        
+        const previousSize = cachedResults?.length || 0;
+        
+        const { error } = await supabase
+          .from('amazon_search_cache')
+          .delete()
+          .eq('user_id', user.user.id);
+        
+        if (error) {
+          funcResultMsg = `Failed to clear Amazon search cache: ${error.message}`;
+        } else {
+          funcResultMsg = `Cleared all ${previousSize} cached Amazon search results. Fresh searches will be performed for future product lookups.`;
+        }
       }
     }
     
@@ -363,60 +414,33 @@ export const handleAmazonSearchFunctions = async (
   return funcResultMsg;
 };
 
-// Updated function to get cached results for UI components using extracted_products
-export const getAmazonSearchCache = async (productName?: string): Promise<AmazonProduct[]> => {
+// Updated function to get cached results for UI components
+export const getAmazonSearchCache = async (productName?: string, searchAll?: boolean): Promise<AmazonProduct[]> => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return [];
 
-  if (productName) {
-    // Get cached data for the specific product using extracted_products
-    const { data: cachedData, error } = await supabase
-      .from('amazon_search_cache')
-      .select('extracted_products')
-      .eq('user_id', user.user.id)
-      .eq('product_query', productName.toLowerCase())
-      .single();
-
-    if (error || !cachedData?.extracted_products) {
-      console.log(`No cached data found for product: ${productName}`);
-      return [];
-    }
-    
-    const extractedProducts = (cachedData.extracted_products as unknown as AmazonProduct[]) || [];
-    console.log(`Found ${extractedProducts.length} cached products for: ${productName}`);
-    return extractedProducts;
+  if (searchAll) {
+    return await getAllCachedAmazonProducts();
+  } else if (productName) {
+    return await searchCachedAmazonData(productName);
   }
 
-  // Get all cached results for the user using extracted_products
-  const { data: allCached, error } = await supabase
+  // Default: get products for specific cached search
+  const { data: cachedData, error } = await supabase
     .from('amazon_search_cache')
     .select('extracted_products')
-    .eq('user_id', user.user.id);
+    .eq('user_id', user.user.id)
+    .eq('product_query', productName?.toLowerCase() || '')
+    .single();
 
-  if (error || !allCached) {
-    console.error('Error fetching all cached results:', error);
+  if (error || !cachedData?.extracted_products) {
     return [];
   }
   
-  // Flatten all extracted products from all cached searches
-  const allResults: AmazonProduct[] = [];
-  allCached.forEach((cache: any) => {
-    if (cache.extracted_products && Array.isArray(cache.extracted_products)) {
-      const products = cache.extracted_products as unknown as AmazonProduct[];
-      allResults.push(...products);
-    }
-  });
-  
-  console.log(`Found ${allResults.length} total cached products`);
-  return allResults;
+  return (cachedData.extracted_products as unknown as AmazonProduct[]) || [];
 };
 
-// Export function to delete cached results from UI
+// Export function to delete entire cached search from UI
 export const deleteCachedResults = async (productName: string) => {
   await deleteCachedSearchResults(productName);
-};
-
-// Export function to delete individual product from UI
-export const deleteProductFromSearchCache = async (productName: string, asin: string) => {
-  await deleteProductFromCache(productName, asin);
 };

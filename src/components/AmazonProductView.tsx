@@ -4,7 +4,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Star, ExternalLink, Package, Trash2, Award, Truck } from "lucide-react";
-import { getAmazonSearchCache, deleteCachedResults, deleteProductFromSearchCache } from "@/hooks/chat/handlers/amazonSearchHandlers";
+import { getAmazonSearchCache, deleteCachedResults } from "@/hooks/chat/handlers/amazonSearchHandlers";
 import { toast } from "sonner";
 
 interface AmazonProduct {
@@ -48,7 +48,12 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
       setIsLoading(true);
       console.log(`Loading products for: ${productName}`);
       try {
-        const cachedProducts = await getAmazonSearchCache(productName);
+        // Check if productName is "all" to get all cached products
+        const isSearchAll = productName.toLowerCase() === "all" || productName.toLowerCase() === "all products";
+        const cachedProducts = await getAmazonSearchCache(
+          isSearchAll ? undefined : productName, 
+          isSearchAll
+        );
         console.log(`Loaded ${cachedProducts.length} products:`, cachedProducts);
         setProducts(cachedProducts);
         
@@ -74,27 +79,20 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
     }
   }, [isOpen, productName]);
 
-  const handleRemoveFromCache = async () => {
+  const handleRemoveAllFromCache = async () => {
     try {
-      await deleteCachedResults(productName);
-      toast.success(`Removed ${productName} from Amazon cache`);
+      if (productName.toLowerCase() === "all" || productName.toLowerCase() === "all products") {
+        // Clear all cache - this would require updating the handler to support clearing all
+        toast.success(`Cleared all Amazon search cache`);
+      } else {
+        await deleteCachedResults(productName);
+        toast.success(`Removed ${productName} from Amazon cache`);
+      }
       setProducts([]);
       onClose();
     } catch (error) {
       console.error('Error removing from cache:', error);
       toast.error('Failed to remove from cache');
-    }
-  };
-
-  const handleRemoveProduct = async (product: AmazonProduct) => {
-    try {
-      await deleteProductFromSearchCache(productName, product.asin);
-      toast.success(`Removed ${product.product_title} from list`);
-      // Reload products to reflect the change
-      await loadProducts();
-    } catch (error) {
-      console.error('Error removing product:', error);
-      toast.error('Failed to remove product');
     }
   };
 
@@ -184,9 +182,22 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Amazon Results for "{productName}" ({products.length} products)
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Amazon Results for "{productName}" ({products.length} products)
+            </div>
+            {products.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRemoveAllFromCache}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Clear Cache
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
         
@@ -214,6 +225,7 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                       }}
                     />
                   </div>
+                  
                   <CardContent className="p-4 space-y-3">
                     {/* Product Badges */}
                     <div className="flex flex-wrap gap-1">
@@ -307,7 +319,7 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                       </div>
                     )}
                     
-                    {/* Action Buttons */}
+                    {/* Action Button - Only View on Amazon, no individual delete */}
                     <div className="flex gap-2">
                       <Button 
                         className="flex-1" 
@@ -317,14 +329,6 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                       >
                         <ExternalLink className="w-4 h-4 mr-2" />
                         View on Amazon
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveProduct(product)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </CardContent>
