@@ -40,6 +40,14 @@ import {
   deleteLeftoverItemTool 
 } from '../functions/crudLeftoversTools';
 
+// Import Amazon search tools
+import {
+  searchAmazonProductTool,
+  searchMultipleAmazonProductsTool,
+  getAmazonSearchResultsTool,
+  clearAmazonSearchCacheTool
+} from '../functions/amazonSearchTools';
+
 export const tools = [{ functionDeclarations: [
     // Original tools
     suggestMealTool,
@@ -87,4 +95,10 @@ export const tools = [{ functionDeclarations: [
     replaceLeftoverItemTool,
     updateLeftoverItemPartialTool,
     deleteLeftoverItemTool,
+    
+    // Amazon search tools
+    searchAmazonProductTool,
+    searchMultipleAmazonProductsTool,
+    getAmazonSearchResultsTool,
+    clearAmazonSearchCacheTool,
 ] }];
