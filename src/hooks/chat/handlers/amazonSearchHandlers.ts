@@ -1,7 +1,61 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
+
+// Type definitions for Amazon search API response (matching actual RapidAPI structure)
+interface AmazonProduct {
+  asin: string;
+  product_title: string;
+  product_price?: string;
+  product_original_price?: string | null;
+  currency?: string;
+  product_star_rating?: string;
+  product_num_ratings?: number;
+  product_url?: string;
+  product_photo?: string;
+  product_minimum_offer_price?: string;
+  product_num_offers?: number;
+  is_best_seller?: boolean;
+  is_amazon_choice?: boolean;
+  is_prime?: boolean;
+  sales_volume?: string;
+  delivery?: string;
+  product_availability?: string;
+  climate_pledge_friendly?: boolean;
+  has_variations?: boolean;
+  product_badge?: string;
+  product_byline?: string;
+  unit_price?: string;
+  unit_count?: number;
+}
+
+interface AmazonSearchResponse {
+  status: string;
+  request_id: string;
+  parameters?: {
+    query: string;
+    country: string;
+    sort_by: string;
+    page: number;
+    is_prime: boolean;
+  };
+  data?: {
+    total_products: number;
+    country: string;
+    domain: string;
+    products: AmazonProduct[];
+  };
+}
+
+// Type for cached search results with proper Json handling
+interface CachedSearchResult {
+  user_id: string;
+  product_query: string;
+  country: string;
+  search_results: unknown; // Use unknown first, then cast to AmazonProduct[]
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Get RapidAPI key from Supabase secrets
 const getRapidAPIKey = async (): Promise<string> => {
@@ -16,8 +70,8 @@ const getRapidAPIKey = async (): Promise<string> => {
   return data.value;
 };
 
-// Real RapidAPI implementation
-const searchAmazonAPI = async (productQuery: string, country: string = "US") => {
+// Real RapidAPI implementation with correct endpoint and parameters
+const searchAmazonAPI = async (productQuery: string, country: string = "US"): Promise<AmazonProduct[]> => {
   console.log(`🔍 Searching Amazon for: ${productQuery} in ${country}`);
   
   try {
@@ -29,9 +83,7 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
       page: "1",
       country: country,
       sort_by: "RELEVANCE",
-      product_condition: "ALL",
-      is_prime: "false",
-      deals_and_discounts: "NONE"
+      is_prime: "false"
     });
     
     const headers = {
@@ -48,10 +100,10 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
       throw new Error(`Amazon API request failed with status: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data: AmazonSearchResponse = await response.json();
     console.log('🔍 Amazon API Response:', data);
     
-    if (!data.data || !data.data.products) {
+    if (data.status !== "OK" || !data.data || !data.data.products) {
       throw new Error('Invalid response format from Amazon API');
     }
     
@@ -62,8 +114,8 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
   }
 };
 
-// Database operations for Amazon search cache
-const getCachedSearchResults = async (productQuery: string, country: string = "US") => {
+// Database operations for Amazon search cache with proper type handling
+const getCachedSearchResults = async (productQuery: string, country: string = "US"): Promise<CachedSearchResult | null> => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return null;
 
@@ -80,10 +132,10 @@ const getCachedSearchResults = async (productQuery: string, country: string = "U
     return null;
   }
 
-  return data;
+  return data as unknown as CachedSearchResult;
 };
 
-const saveCachedSearchResults = async (productQuery: string, searchResults: any[], country: string = "US") => {
+const saveCachedSearchResults = async (productQuery: string, searchResults: AmazonProduct[], country: string = "US") => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return;
 
@@ -93,7 +145,7 @@ const saveCachedSearchResults = async (productQuery: string, searchResults: any[
       user_id: user.user.id,
       product_query: productQuery.toLowerCase(),
       country: country,
-      search_results: searchResults
+      search_results: searchResults as unknown as any // Cast to satisfy Supabase Json type
     });
 
   if (error) {
@@ -141,19 +193,24 @@ export const handleAmazonSearchFunctions = async (
       const cachedData = await getCachedSearchResults(product_query, country);
       if (cachedData) {
         addThoughtStep(`📋 Using cached results for ${product_query}`);
-        const cachedResults = cachedData.search_results;
+        const cachedResults = cachedData.search_results as AmazonProduct[];
         funcResultMsg = `Found ${cachedResults?.length || 0} cached Amazon results for "${product_query}". Results are ready to display.`;
       } else {
         // Perform search and cache results
         const searchResults = await searchAmazonAPI(product_query, country);
         await saveCachedSearchResults(product_query, searchResults, country);
         
-        funcResultMsg = `Found ${searchResults.length} Amazon products for "${product_query}". Top result: ${searchResults[0]?.title} at ${searchResults[0]?.price}. Results cached for quick access.`;
+        const topProduct = searchResults[0];
+        const productTitle = topProduct?.product_title || 'Unknown Product';
+        const productPrice = topProduct?.product_price || 'Price unavailable';
+        
+        funcResultMsg = `Found ${searchResults.length} Amazon products for "${product_query}". Top result: ${productTitle} at ${productPrice}. Results cached for quick access.`;
         addThoughtStep(`✅ Found ${searchResults.length} products for ${product_query}`);
       }
     } catch (error) {
       console.error("Amazon search error:", error);
-      funcResultMsg = `Sorry, I couldn't search Amazon for "${functionCall.args?.product_query}" right now. There was an issue with the search API. Please try again later.`;
+      const args_typed = functionCall.args as { product_query?: string };
+      funcResultMsg = `Sorry, I couldn't search Amazon for "${args_typed?.product_query || 'the requested product'}" right now. There was an issue with the search API. Please try again later.`;
       addThoughtStep(`❌ Amazon search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } else if (functionCall.name === "searchMultipleAmazonProducts") {
@@ -208,8 +265,10 @@ export const handleAmazonSearchFunctions = async (
       const cachedData = await getCachedSearchResults(product_name);
       
       if (cachedData) {
-        const results = cachedData.search_results;
-        funcResultMsg = `Found ${results.length} Amazon results for "${product_name}". Ready to display product details including prices ranging from ${results[results.length-1]?.price} to ${results[0]?.price}.`;
+        const results = cachedData.search_results as AmazonProduct[];
+        const highestPrice = results[0]?.product_price || 'N/A';
+        const lowestPrice = results[results.length-1]?.product_price || 'N/A';
+        funcResultMsg = `Found ${results.length} Amazon results for "${product_name}". Ready to display product details including prices ranging from ${lowestPrice} to ${highestPrice}.`;
       } else {
         funcResultMsg = `No cached Amazon results found for "${product_name}". Try searching for this product first.`;
       }
@@ -256,13 +315,13 @@ export const handleAmazonSearchFunctions = async (
 };
 
 // Export function to get cached results for UI components
-export const getAmazonSearchCache = async (productName?: string) => {
+export const getAmazonSearchCache = async (productName?: string): Promise<AmazonProduct[]> => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return [];
 
   if (productName) {
     const cachedData = await getCachedSearchResults(productName);
-    return cachedData?.search_results || [];
+    return (cachedData?.search_results as AmazonProduct[]) || [];
   }
 
   const { data: allCached } = await supabase
@@ -270,7 +329,17 @@ export const getAmazonSearchCache = async (productName?: string) => {
     .select('*')
     .eq('user_id', user.user.id);
 
-  return allCached || [];
+  if (!allCached) return [];
+  
+  // Flatten all search results from all cached searches
+  const allResults: AmazonProduct[] = [];
+  allCached.forEach((cache: any) => {
+    if (cache.search_results && Array.isArray(cache.search_results)) {
+      allResults.push(...(cache.search_results as AmazonProduct[]));
+    }
+  });
+  
+  return allResults;
 };
 
 // Export function to delete cached results from UI
