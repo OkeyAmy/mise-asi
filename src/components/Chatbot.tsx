@@ -62,6 +62,10 @@ export const Chatbot = ({
     setThoughtSteps,
     session,
     thoughtSteps,
+    onGetLeftovers: async () => [],
+    onAddLeftover: async () => {},
+    onUpdateLeftover: async () => {},
+    onRemoveLeftover: async () => {},
   });
 
   const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");

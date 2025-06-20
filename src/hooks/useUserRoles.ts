@@ -27,17 +27,18 @@ export function useUserRoles(session: Session | null) {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id);
+      // Since user_roles table doesn't exist in the current schema,
+      // we'll use a function to get user roles if it exists
+      const { data, error } = await supabase.rpc('get_user_roles', {
+        p_user_id: session.user.id
+      });
 
       if (error) {
         console.error('Error fetching user roles:', error);
         // Fallback: assume user role for now
         setUserRoles(['user']);
       } else {
-        const roles = data?.map(item => item.role as UserRole) || ['user'];
+        const roles = data?.map((item: any) => item.role as UserRole) || ['user'];
         setUserRoles(roles);
       }
     } catch (error) {
