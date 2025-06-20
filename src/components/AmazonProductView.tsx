@@ -4,7 +4,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Star, ExternalLink, Package, Trash2, Award, Truck } from "lucide-react";
-import { getAmazonSearchCache, deleteCachedResults } from "@/hooks/chat/handlers/amazonSearchHandlers";
+import { getAmazonSearchCache, deleteCachedResults, deleteProductFromSearchCache } from "@/hooks/chat/handlers/amazonSearchHandlers";
 import { toast } from "sonner";
 
 interface AmazonProduct {
@@ -71,6 +71,18 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
     } catch (error) {
       console.error('Error removing from cache:', error);
       toast.error('Failed to remove from cache');
+    }
+  };
+
+  const handleRemoveProduct = async (product: AmazonProduct) => {
+    try {
+      await deleteProductFromSearchCache(productName, product.asin);
+      toast.success(`Removed ${product.product_title} from list`);
+      // Reload products to reflect the change
+      await loadProducts();
+    } catch (error) {
+      console.error('Error removing product:', error);
+      toast.error('Failed to remove product');
     }
   };
 
@@ -173,7 +185,7 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                 className="text-red-600 hover:text-red-700"
               >
                 <Trash2 className="w-4 h-4 mr-1" />
-                Remove from Cache
+                Remove All from Cache
               </Button>
             )}
           </DialogTitle>
@@ -296,16 +308,26 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                       </div>
                     )}
                     
-                    {/* View on Amazon Button */}
-                    <Button 
-                      className="w-full" 
-                      onClick={() => product.product_url && window.open(product.product_url, '_blank')}
-                      size="sm"
-                      disabled={!product.product_url}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View on Amazon
-                    </Button>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1" 
+                        onClick={() => product.product_url && window.open(product.product_url, '_blank')}
+                        size="sm"
+                        disabled={!product.product_url}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View on Amazon
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveProduct(product)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

@@ -1,3 +1,4 @@
+
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -173,6 +174,43 @@ const deleteCachedSearchResults = async (productQuery: string, country: string =
   }
 };
 
+// New function to delete individual product from cache
+const deleteProductFromCache = async (productQuery: string, asin: string, country: string = "US") => {
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) return;
+
+  // Get current cached results
+  const cachedData = await getCachedSearchResults(productQuery, country);
+  if (!cachedData) return;
+
+  const currentResults = cachedData.search_results as AmazonProduct[];
+  
+  // Filter out the product with the specified ASIN
+  const updatedResults = currentResults.filter(product => product.asin !== asin);
+
+  if (updatedResults.length === 0) {
+    // If no products left, delete the entire cache entry
+    await deleteCachedSearchResults(productQuery, country);
+  } else {
+    // Update cache with remaining products
+    const { error } = await supabase
+      .from('amazon_search_cache')
+      .update({
+        search_results: updatedResults as unknown as any,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', user.user.id)
+      .eq('product_query', productQuery.toLowerCase())
+      .eq('country', country);
+
+    if (error) {
+      console.error('Error updating cache:', error);
+    } else {
+      console.log('✅ Removed product from cache:', asin);
+    }
+  }
+};
+
 export const handleAmazonSearchFunctions = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs
@@ -345,4 +383,9 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
 // Export function to delete cached results from UI
 export const deleteCachedResults = async (productName: string) => {
   await deleteCachedSearchResults(productName);
+};
+
+// Export function to delete individual product from UI
+export const deleteProductFromSearchCache = async (productName: string, asin: string) => {
+  await deleteProductFromCache(productName, asin);
 };
