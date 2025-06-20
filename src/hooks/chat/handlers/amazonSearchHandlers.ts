@@ -358,33 +358,70 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
   if (!user.user) return [];
 
   if (productName) {
+    // Try to get cached data for the specific product
     const cachedData = await getCachedSearchResults(productName);
-    if (!cachedData || !cachedData.search_results) return [];
+    if (!cachedData || !cachedData.search_results) {
+      console.log(`No cached data found for product: ${productName}`);
+      return [];
+    }
+    
+    // Parse the JSON data from the database
+    let searchResults;
+    if (typeof cachedData.search_results === 'string') {
+      try {
+        searchResults = JSON.parse(cachedData.search_results);
+      } catch (error) {
+        console.error('Error parsing search results JSON:', error);
+        return [];
+      }
+    } else {
+      searchResults = cachedData.search_results;
+    }
     
     // Ensure we're working with an array of products
-    const searchResults = cachedData.search_results;
     if (Array.isArray(searchResults)) {
+      console.log(`Found ${searchResults.length} cached products for: ${productName}`);
       return searchResults as AmazonProduct[];
     }
     
+    console.log('Search results is not an array:', typeof searchResults);
     return [];
   }
 
-  const { data: allCached } = await supabase
+  // Get all cached results for the user
+  const { data: allCached, error } = await supabase
     .from('amazon_search_cache')
     .select('*')
     .eq('user_id', user.user.id);
 
-  if (!allCached) return [];
+  if (error || !allCached) {
+    console.error('Error fetching all cached results:', error);
+    return [];
+  }
   
   // Flatten all search results from all cached searches
   const allResults: AmazonProduct[] = [];
   allCached.forEach((cache: any) => {
-    if (cache.search_results && Array.isArray(cache.search_results)) {
-      allResults.push(...(cache.search_results as AmazonProduct[]));
+    if (cache.search_results) {
+      let searchResults;
+      if (typeof cache.search_results === 'string') {
+        try {
+          searchResults = JSON.parse(cache.search_results);
+        } catch (error) {
+          console.error('Error parsing cached search results:', error);
+          return;
+        }
+      } else {
+        searchResults = cache.search_results;
+      }
+      
+      if (Array.isArray(searchResults)) {
+        allResults.push(...(searchResults as AmazonProduct[]));
+      }
     }
   });
   
+  console.log(`Found ${allResults.length} total cached products`);
   return allResults;
 };
 

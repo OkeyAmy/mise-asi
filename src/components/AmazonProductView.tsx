@@ -46,9 +46,15 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
   const loadProducts = React.useCallback(async () => {
     if (isOpen && productName) {
       setIsLoading(true);
+      console.log(`Loading products for: ${productName}`);
       try {
         const cachedProducts = await getAmazonSearchCache(productName);
+        console.log(`Loaded ${cachedProducts.length} products:`, cachedProducts);
         setProducts(cachedProducts);
+        
+        if (cachedProducts.length === 0) {
+          console.log(`No cached products found for: ${productName}`);
+        }
       } catch (error) {
         console.error('Error loading products:', error);
         toast.error('Failed to load Amazon products');
@@ -61,6 +67,12 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
   React.useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  React.useEffect(() => {
+    if (isOpen && productName) {
+      console.log(`AmazonProductView opened for: ${productName}`);
+    }
+  }, [isOpen, productName]);
 
   const handleRemoveFromCache = async () => {
     try {
@@ -175,7 +187,7 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
           <DialogTitle className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              Amazon Results for "{productName}"
+              Amazon Results for "{productName}" ({products.length} products)
             </div>
             {products.length > 0 && (
               <Button
