@@ -100,6 +100,18 @@ export const Chatbot = ({
     updateLeftover(id, { servings });
   };
 
+  const handleRemoveShoppingItem = (itemName: string) => {
+    removeItem(itemName);
+  };
+
+  const handleUpdateShoppingItem = (itemName: string, updates: Partial<ShoppingListItem>) => {
+    if (updates.quantity !== undefined && updates.unit !== undefined) {
+      updateItem(itemName, updates.quantity, updates.unit);
+    } else if (updates.quantity !== undefined) {
+      updateItem(itemName, updates.quantity);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       <ChatHeader onResetConversation={resetConversation} />
@@ -136,8 +148,8 @@ export const Chatbot = ({
           </DialogHeader>
           <ShoppingList
             items={shoppingListItems || []}
-            onRemove={removeItem}
-            onUpdate={updateItem}
+            onRemove={handleRemoveShoppingItem}
+            onUpdate={handleUpdateShoppingItem}
             session={session}
           />
         </DialogContent>

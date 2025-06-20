@@ -9,8 +9,8 @@ import { ShareShoppingListDialog } from "./ShareShoppingListDialog";
 
 interface ShoppingListProps {
   items: ShoppingListItem[];
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<ShoppingListItem>) => void;
+  onRemove: (itemName: string) => void;
+  onUpdate: (itemName: string, updates: Partial<ShoppingListItem>) => void;
   session: Session | null;
 }
 
@@ -34,7 +34,10 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
 
   const saveEdit = () => {
     if (editingId) {
-      onUpdate(editingId, editValues);
+      const currentItem = items.find(i => i.id === editingId);
+      if (currentItem) {
+        onUpdate(currentItem.item, editValues);
+      }
       setEditingId(null);
     }
   };
@@ -43,19 +46,13 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
     setEditingId(null);
   };
 
-  const updateQuantity = (id: string, delta: number) => {
-    const item = items.find(i => i.id === id);
-    if (item) {
-      const newQuantity = Math.max(0, item.quantity + delta);
-      onUpdate(id, { quantity: newQuantity });
-    }
+  const updateQuantity = (item: ShoppingListItem, delta: number) => {
+    const newQuantity = Math.max(0, item.quantity + delta);
+    onUpdate(item.item, { quantity: newQuantity });
   };
 
-  const toggleComplete = (id: string) => {
-    const item = items.find(i => i.id === id);
-    if (item) {
-      onUpdate(id, { completed: !item.completed });
-    }
+  const toggleComplete = (item: ShoppingListItem) => {
+    onUpdate(item.item, { completed: !item.completed });
   };
 
   if (items.length === 0) {
@@ -97,7 +94,7 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => toggleComplete(item.id)}
+              onClick={() => toggleComplete(item)}
               className={`h-6 w-6 p-0 rounded-full border-2 ${
                 item.completed
                   ? "bg-green-500 border-green-500 text-white"
@@ -155,7 +152,7 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateQuantity(item.id, -1)}
+                    onClick={() => updateQuantity(item, -1)}
                     className="h-8 w-8 p-0"
                   >
                     <Minus className="h-4 w-4" />
@@ -166,7 +163,7 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateQuantity(item.id, 1)}
+                    onClick={() => updateQuantity(item, 1)}
                     className="h-8 w-8 p-0"
                   >
                     <Plus className="h-4 w-4" />
@@ -176,7 +173,7 @@ export function ShoppingList({ items, onRemove, onUpdate, session }: ShoppingLis
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onRemove(item.id)}
+                  onClick={() => onRemove(item.item)}
                   className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
