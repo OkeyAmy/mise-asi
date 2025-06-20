@@ -24,8 +24,8 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
   }, [messages, isThinking]);
 
   return (
-    <ScrollArea className="flex-1 p-6 overscroll-contain">
-      <div className="space-y-4">
+    <ScrollArea className="h-full w-full">
+      <div className="space-y-4 p-6">
         {messages.map((message) => (
           <div key={message.id} className={cn("flex items-end gap-2", message.sender === "user" ? "justify-end" : "justify-start")}>
             {message.sender === 'bot' && <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary text-primary-foreground"><Bot className="h-4 w-4" /></AvatarFallback></Avatar>}

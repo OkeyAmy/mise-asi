@@ -4,7 +4,7 @@
 
 A smart AI-powered nutrition assistant that provides personalized meal suggestions, manages your food inventory, tracks leftovers, and helps reduce food waste through intelligent meal planning.
 
-![Mise AI](https://images.unsplash.com/photo-1556909876-0ad7a828b935?w=800&h=400&fit=crop&crop=center)
+![Mise AI](public\image.png)
 
 ## 🌟 Key Features
 

@@ -1,45 +1,72 @@
-
 import { FunctionCall } from "@google/generative-ai";
-import { ShoppingListItem } from "@/data/schema";
 import { FunctionHandlerArgs } from "./handlerUtils";
 
 export const handleShoppingListCrudFunctions = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs
 ): Promise<string> => {
-  const { addThoughtStep, shoppingListItems, onAddItemsToShoppingList, onRemoveItemsFromShoppingList, onUpdateShoppingList } = args;
+  const { 
+    addThoughtStep, 
+    onGetShoppingListItems,
+    onCreateShoppingListItems,
+    onUpdateShoppingListItem,
+    onDeleteShoppingListItems,
+    onReplaceShoppingList
+  } = args;
+  
+  console.log("🔧 CRUD Shopping List Handler Called:", functionCall.name);
+  console.log("🔧 Available callbacks:", {
+    onGetShoppingListItems: !!onGetShoppingListItems,
+    onCreateShoppingListItems: !!onCreateShoppingListItems,
+    onUpdateShoppingListItem: !!onUpdateShoppingListItem,
+    onDeleteShoppingListItems: !!onDeleteShoppingListItems,
+    onReplaceShoppingList: !!onReplaceShoppingList
+  });
+  
   let funcResultMsg = "";
 
   // GET - Retrieve shopping list items
   if (functionCall.name === "getShoppingListItems") {
-    addThoughtStep("✅ Retrieved shopping list items");
-    
-    if (shoppingListItems && shoppingListItems.length > 0) {
-      let shoppingListDetails = "Current shopping list items:\n\n";
-      shoppingListItems.forEach((item, index) => {
-        shoppingListDetails += `- Item ${index + 1}:\n`;
-        shoppingListDetails += `  Name: ${item.item}\n`;
-        shoppingListDetails += `  Quantity: ${item.quantity} ${item.unit}\n\n`;
-      });
-      funcResultMsg = shoppingListDetails;
-    } else {
-      funcResultMsg = "The shopping list is currently empty.";
+    try {
+      if (onGetShoppingListItems) {
+        const shoppingListItems = await onGetShoppingListItems();
+        addThoughtStep("✅ Retrieved shopping list items");
+        
+        if (shoppingListItems.length > 0) {
+          let listDetails = "Current shopping list items:\n\n";
+          shoppingListItems.forEach((item: any) => {
+            listDetails += `- ${item.quantity} ${item.unit} of ${item.item}\n`;
+          });
+          funcResultMsg = listDetails;
+        } else {
+          funcResultMsg = "Shopping list is empty.";
+        }
+      } else {
+        funcResultMsg = "Get shopping list function is not available right now.";
+      }
+    } catch (e) {
+      console.error("❌ Error getting shopping list:", e);
+      funcResultMsg = "I had trouble retrieving your shopping list.";
     }
   }
 
   // POST - Create new shopping list items
   else if (functionCall.name === "createShoppingListItems") {
     try {
-      const { items } = functionCall.args as { items: ShoppingListItem[] };
-      if (onAddItemsToShoppingList) {
-        await onAddItemsToShoppingList(items);
-        const itemNames = items.map(item => item.item).join(', ');
-        funcResultMsg = `I've added ${items.length} new item(s) to your shopping list: ${itemNames}.`;
+      const { items } = functionCall.args as { items: { item: string; quantity: number; unit: string; }[] };
+      console.log("📝 Creating shopping list items:", items);
+      
+      if (onCreateShoppingListItems) {
+        await onCreateShoppingListItems(items);
+        const itemNames = items.map(item => `${item.quantity} ${item.unit} of ${item.item}`).join(', ');
+        funcResultMsg = `I've added ${items.length} item(s) to your shopping list: ${itemNames}.`;
+        console.log("✅ Successfully created shopping list items");
       } else {
-        funcResultMsg = "Shopping list function is not available right now.";
+        console.log("❌ onCreateShoppingListItems callback not available");
+        funcResultMsg = "Add to shopping list function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error creating shopping list items:", e);
       funcResultMsg = "I had trouble adding items to your shopping list.";
     }
     addThoughtStep("✅ Created shopping list items");
@@ -48,44 +75,49 @@ export const handleShoppingListCrudFunctions = async (
   // PUT - Replace entire shopping list
   else if (functionCall.name === "replaceShoppingList") {
     try {
-      const { items } = functionCall.args as { items: ShoppingListItem[] };
-      if (onUpdateShoppingList) {
-        await onUpdateShoppingList(items);
-        funcResultMsg = `I've replaced your entire shopping list with ${items.length} new item(s).`;
+      const { items } = functionCall.args as { items: { item: string; quantity: number; unit: string; }[] };
+      console.log("🔄 Replacing entire shopping list with:", items);
+      
+      if (onReplaceShoppingList) {
+        await onReplaceShoppingList(items);
+        if (items.length === 0) {
+          funcResultMsg = "I've cleared your shopping list completely.";
+        } else {
+          funcResultMsg = `I've replaced your shopping list with ${items.length} new item(s).`;
+        }
+        console.log("✅ Successfully replaced shopping list");
       } else {
-        funcResultMsg = "Shopping list function is not available right now.";
+        console.log("❌ onReplaceShoppingList callback not available");
+        funcResultMsg = "Replace shopping list function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error replacing shopping list:", e);
       funcResultMsg = "I had trouble replacing your shopping list.";
     }
     addThoughtStep("✅ Replaced shopping list");
   }
 
-  // PATCH - Update specific shopping list item quantities
+  // PATCH - Update shopping list item
   else if (functionCall.name === "updateShoppingListItem") {
     try {
       const { item_name, quantity, unit } = functionCall.args as { item_name: string; quantity?: number; unit?: string };
+      console.log("📝 Updating shopping list item:", { item_name, quantity, unit });
       
-      if (shoppingListItems && onUpdateShoppingList) {
-        const updatedItems = shoppingListItems.map(item => {
-          if (item.item.toLowerCase() === item_name.toLowerCase()) {
-            return {
-              ...item,
-              quantity: quantity !== undefined ? quantity : item.quantity,
-              unit: unit !== undefined ? unit : item.unit
-            };
-          }
-          return item;
-        });
+      if (onUpdateShoppingListItem) {
+        const updates: { quantity?: number; unit?: string } = {};
+        if (quantity !== undefined) updates.quantity = quantity;
+        if (unit !== undefined) updates.unit = unit;
         
-        await onUpdateShoppingList(updatedItems);
-        funcResultMsg = `I've updated ${item_name} in your shopping list.`;
+        await onUpdateShoppingListItem(item_name, updates);
+        const updatedFields = Object.keys(updates).join(' and ');
+        funcResultMsg = `I've updated the ${updatedFields} for ${item_name} in your shopping list.`;
+        console.log("✅ Successfully updated shopping list item");
       } else {
-        funcResultMsg = "Shopping list function is not available right now.";
+        console.log("❌ onUpdateShoppingListItem callback not available");
+        funcResultMsg = "Update shopping list function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error updating shopping list item:", e);
       funcResultMsg = "I had trouble updating the shopping list item.";
     }
     addThoughtStep("✅ Updated shopping list item");
@@ -95,18 +127,24 @@ export const handleShoppingListCrudFunctions = async (
   else if (functionCall.name === "deleteShoppingListItems") {
     try {
       const { item_names } = functionCall.args as { item_names: string[] };
-      if (onRemoveItemsFromShoppingList) {
-        await onRemoveItemsFromShoppingList(item_names);
-        funcResultMsg = `I've removed ${item_names.join(', ')} from your shopping list.`;
+      console.log("🗑️ Deleting shopping list items:", item_names);
+      
+      if (onDeleteShoppingListItems) {
+        await onDeleteShoppingListItems(item_names);
+        const itemList = item_names.join(', ');
+        funcResultMsg = `I've removed the following item(s) from your shopping list: ${itemList}.`;
+        console.log("✅ Successfully deleted shopping list items");
       } else {
-        funcResultMsg = "Shopping list function is not available right now.";
+        console.log("❌ onDeleteShoppingListItems callback not available");
+        funcResultMsg = "Delete shopping list function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error deleting shopping list items:", e);
       funcResultMsg = "I had trouble removing items from your shopping list.";
     }
     addThoughtStep("✅ Deleted shopping list items");
   }
 
+  console.log("🏁 CRUD Shopping List Handler Result:", funcResultMsg);
   return funcResultMsg;
 };

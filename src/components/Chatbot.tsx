@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "./ui/card";
 import { ShoppingList } from "./ShoppingList";
@@ -93,6 +92,91 @@ export const Chatbot = ({
       console.log("onGetInventory, items:", items);
       return items;
     },
+    
+    // CRUD Inventory callbacks
+    onCreateInventoryItems: async (items) => {
+      console.log("🔧 onCreateInventoryItems called with:", items);
+      for (const item of items) {
+        try {
+          const result = await chatData.inventory.upsertItem({
+            ...item,
+            location: item.location || 'pantry',
+            notes: item.notes || 'Added by AI',
+          });
+          console.log("✅ Inventory create result:", result);
+        } catch (e) {
+          console.error("❌ Inventory create failed for item:", item, e);
+        }
+      }
+      toast.success("Your inventory has been updated.");
+    },
+    onUpdateInventoryItem: async (itemId, updates) => {
+      console.log("🔧 onUpdateInventoryItem called with:", { itemId, updates });
+      try {
+        const result = await chatData.inventory.updateItem(itemId, updates);
+        console.log("✅ Inventory update result:", result);
+        toast.success("Inventory item updated.");
+      } catch (e) {
+        console.error("❌ Inventory update failed:", e);
+        toast.error("Failed to update inventory item.");
+      }
+    },
+    onDeleteInventoryItem: async (itemId) => {
+      console.log("🔧 onDeleteInventoryItem called with:", itemId);
+      try {
+        const result = await chatData.inventory.deleteItem(itemId);
+        console.log("✅ Inventory delete result:", result);
+        toast.success("Inventory item deleted.");
+      } catch (e) {
+        console.error("❌ Inventory delete failed:", e);
+        toast.error("Failed to delete inventory item.");
+      }
+    },
+    
+    // CRUD Shopping List callbacks
+    onGetShoppingListItems: async () => {
+      console.log("🔧 onGetShoppingListItems called");
+      const items = chatData.shoppingList.items;
+      console.log("📋 Shopping list items:", items);
+      return items;
+    },
+    onCreateShoppingListItems: async (items) => {
+      console.log("🔧 onCreateShoppingListItems called with:", items);
+      await chatData.shoppingList.addItems(items);
+      toast.success("Items added to shopping list.");
+    },
+    onUpdateShoppingListItem: async (itemName, updates) => {
+      console.log("🔧 onUpdateShoppingListItem called with:", { itemName, updates });
+      // Find item and update it by replacing the entire list
+      const currentItems = chatData.shoppingList.items;
+      const updatedItems = currentItems.map(item => {
+        if (item.item.toLowerCase() === itemName.toLowerCase()) {
+          return {
+            ...item,
+            quantity: updates.quantity !== undefined ? updates.quantity : item.quantity,
+            unit: updates.unit !== undefined ? updates.unit : item.unit
+          };
+        }
+        return item;
+      });
+      await chatData.shoppingList.saveList(updatedItems);
+      toast.success("Shopping list updated.");
+    },
+    onDeleteShoppingListItems: async (itemNames) => {
+      console.log("🔧 onDeleteShoppingListItems called with:", itemNames);
+      await chatData.shoppingList.removeItems(itemNames);
+      toast.success("Items removed from shopping list.");
+    },
+    onReplaceShoppingList: async (items) => {
+      console.log("🔧 onReplaceShoppingList called with:", items);
+      await chatData.shoppingList.saveList(items);
+      if (items.length === 0) {
+        toast.success("Shopping list cleared.");
+      } else {
+        toast.success("Shopping list replaced.");
+      }
+    },
+    
     onGetUserPreferences: async () => {
       return chatData.preferences.data;
     },
@@ -114,20 +198,49 @@ export const Chatbot = ({
     onRemoveLeftover: async (id) => {
       await chatData.leftovers.remove(id);
     },
+    
+    // CRUD Leftovers callbacks - using legacy handlers as fallback
+    onCreateLeftoverItems: async (items) => {
+      console.log("🔧 onCreateLeftoverItems called with:", items);
+      for (const item of items) {
+        await chatData.leftovers.add(item);
+      }
+      toast.success("Leftover items added.");
+    },
+    onUpdateLeftoverItemPartial: async (leftoverId, updates) => {
+      console.log("🔧 onUpdateLeftoverItemPartial called with:", { leftoverId, updates });
+      await chatData.leftovers.update(leftoverId, updates);
+      toast.success("Leftover item updated.");
+    },
+    onDeleteLeftoverItem: async (leftoverId) => {
+      console.log("🔧 onDeleteLeftoverItem called with:", leftoverId);
+      await chatData.leftovers.remove(leftoverId);
+      toast.success("Leftover item deleted.");
+    },
+    
     session: userSession,
     thoughtSteps,
   });
 
   return (
     <div className="h-full flex flex-col relative">
-      {/* Chat content */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <Card className="flex flex-col h-full shadow-none border-0 rounded-2xl overflow-hidden">
-          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+      {/* Main chat container with fixed layout */}
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        {/* Scrollable chat messages area */}
+        <div className="flex-1 min-h-0 relative chat-messages-area">
+          <Card className="h-full shadow-none border-0 rounded-2xl rounded-b-none chat-layout-transition">
+            <CardContent className="h-full p-0 flex flex-col">
             <ChatMessageList messages={messages} isThinking={isThinking} />
           </CardContent>
-          {/* Chat input panel is now a flex item, constrained to the Card width */}
-          <div className="bg-background border-t border-border rounded-t-2xl flex items-center">
+          </Card>
+        </div>
+        
+        {/* Visual separator */}
+        <div className="chat-input-separator"></div>
+        
+        {/* Fixed input area at bottom */}
+        <div className="flex-shrink-0 chat-input-fixed rounded-b-2xl">
+          <div className="flex items-center p-1">
             <div className="pl-2 pr-1">
               <ResetConversationButton onReset={resetConversation} iconOnly />
             </div>
@@ -140,8 +253,9 @@ export const Chatbot = ({
               />
             </div>
           </div>
-        </Card>
+        </div>
       </div>
+
       {/* Dialog: Shopping List */}
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <DialogContent className="max-w-md rounded-2xl">
@@ -158,6 +272,7 @@ export const Chatbot = ({
           />
         </DialogContent>
       </Dialog>
+      
       {/* Dialog: Leftovers */}
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
         <DialogContent className="max-w-md rounded-2xl">

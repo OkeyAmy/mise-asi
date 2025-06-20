@@ -47,7 +47,14 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
 
   // Remove multiple items from the shopping list
   const removeItems = async (itemNames: string[]) => {
-    if (!session?.user.id || itemNames.length === 0) return;
+    console.log("removeItems called with:", itemNames);
+    console.log("session user id:", session?.user.id);
+    console.log("mealPlanId:", mealPlanId);
+    
+    if (!session?.user.id || itemNames.length === 0) {
+      console.log("Aborting removeItems: no session or empty itemNames");
+      return;
+    }
 
     let query = supabase
       .from("shopping_lists")
@@ -67,15 +74,29 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       return;
     }
 
+    console.log("Current shopping list data:", data);
+
     if (data && Array.isArray(data.items)) {
       const lowerCaseItemNames = itemNames.map(name => name.toLowerCase());
-      const filtered = (data.items as unknown as ShoppingListItem[]).filter((i: ShoppingListItem) => !lowerCaseItemNames.includes(i.item.toLowerCase()));
-      await supabase
+      console.log("Items to remove (lowercase):", lowerCaseItemNames);
+      
+      const currentItems = data.items as unknown as ShoppingListItem[];
+      console.log("Current items before filtering:", currentItems);
+      
+      const filtered = currentItems.filter((i: ShoppingListItem) => !lowerCaseItemNames.includes(i.item.toLowerCase()));
+      console.log("Filtered items after removal:", filtered);
+      
+      const updateResult = await supabase
         .from("shopping_lists")
         .update({ items: filtered as any })
         .eq("id", data.id);
+      
+      console.log("Database update result:", updateResult);
 
       setItems(filtered);
+      console.log("Local state updated with filtered items");
+    } else {
+      console.log("No data or items array not found");
     }
   };
 
@@ -86,7 +107,14 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
 
   // Replace the whole shopping list when a new one is generated
   const saveList = async (newItems: ShoppingListItem[]) => {
-    if (!session?.user.id) return;
+    console.log("saveList called with:", newItems);
+    console.log("session user id:", session?.user.id);
+    console.log("mealPlanId:", mealPlanId);
+    
+    if (!session?.user.id) {
+      console.log("Aborting saveList: no session");
+      return;
+    }
 
     let query = supabase
       .from("shopping_lists")
@@ -106,21 +134,28 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
       return;
     }
 
+    console.log("Existing shopping list record:", data);
+
     if (data && data.id) {
-      await supabase
+      console.log("Updating existing shopping list with ID:", data.id);
+      const updateResult = await supabase
         .from("shopping_lists")
         .update({ items: newItems as any, updated_at: new Date().toISOString() })
         .eq("id", data.id);
+      console.log("Update result:", updateResult);
     } else {
-      await supabase
+      console.log("Creating new shopping list record");
+      const insertResult = await supabase
         .from("shopping_lists")
         .insert({
           user_id: session.user.id,
           meal_plan_id: isValidUUID(mealPlanId) ? mealPlanId : null,
           items: newItems as any,
         });
+      console.log("Insert result:", insertResult);
     }
     setItems(newItems);
+    console.log("Local state updated with new items:", newItems);
   };
 
   // Add items to the shopping list, merging if they already exist

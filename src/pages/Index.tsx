@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { Header } from "@/components/Header";
@@ -7,7 +7,7 @@ import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
   const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
@@ -15,15 +15,32 @@ const Index = () => {
   const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false); // Default to closed for better overlay UX
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
 
+  // Handle escape key to close sidebar
   useEffect(() => {
-    // On small screens (lg breakpoint is 1024px), default the panel to closed.
-    if (window.innerWidth < 1024) {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isRightPanelOpen) {
       setIsRightPanelOpen(false);
+        // Return focus to toggle button
+        toggleButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isRightPanelOpen]);
+
+  // Focus management for accessibility
+  useEffect(() => {
+    if (isRightPanelOpen && sidebarRef.current) {
+      // Focus the sidebar when it opens
+      sidebarRef.current.focus();
     }
-  }, []);
+  }, [isRightPanelOpen]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -48,13 +65,17 @@ const Index = () => {
     return null;
   }
 
+  const toggleSidebar = () => {
+    setIsRightPanelOpen(prev => !prev);
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="h-screen-safe bg-background text-foreground flex flex-col relative">
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
       
-      <div className="flex flex-1 pt-20 relative overflow-hidden">
-        {/* Main chat area - better proportions for desktop */}
-        <div className={`flex-1 transition-all duration-300 ${isRightPanelOpen ? 'lg:max-w-[calc(100%-320px)]' : 'w-full'}`}>
+      {/* Main content area - full width, chat interface is always accessible */}
+      <div className="flex-1 pt-20 relative min-h-0">
+        <div className="w-full h-full chat-interface">
           <Chatbot
             plan={mealPlan}
             setPlan={setMealPlan}
@@ -68,36 +89,72 @@ const Index = () => {
           />
         </div>
         
-        {/* Desktop sidebar - optimized width */}
-        <div className={`hidden lg:flex relative transition-all duration-300 ${isRightPanelOpen ? 'w-80' : 'w-7'} border-l flex-col min-h-0`}>
+        {/* Desktop Sidebar Toggle Button - Fixed positioning for consistent access */}
           <button
-            aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
-            onClick={() => setIsRightPanelOpen((prev) => !prev)}
-            className="absolute top-4 left-[-18px] z-50 bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl w-8 h-8 flex items-center justify-center"
+          ref={toggleButtonRef}
+          aria-label={isRightPanelOpen ? "Close thought process sidebar" : "Open thought process sidebar"}
+          aria-expanded={isRightPanelOpen}
+          aria-controls="thought-process-sidebar"
+          onClick={toggleSidebar}
+          className="hidden lg:flex fixed top-24 right-4 z-toggle bg-primary text-primary-foreground border border-border rounded-full shadow-lg toggle-button w-12 h-12 items-center justify-center focus-ring"
           >
             {isRightPanelOpen ? (
-              <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-5 h-5 transition-transform duration-200" />
             ) : (
-              <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5 transition-transform duration-200" />
             )}
           </button>
-          <div className={`h-full transition-all duration-300 ease-in-out bg-background overflow-hidden min-h-0 ${isRightPanelOpen ? 'opacity-100 p-4' : 'opacity-0 pointer-events-none p-0'}`}>
-            {isRightPanelOpen && <ThoughtProcess steps={thoughtSteps} />}
-          </div>
+
+        {/* Desktop Sidebar Overlay */}
+        <div 
+          id="thought-process-sidebar"
+          ref={sidebarRef}
+          role="complementary"
+          aria-label="Thought process sidebar"
+          tabIndex={-1}
+          className={`hidden lg:flex fixed top-20 right-0 bottom-0 z-sidebar sidebar-width sidebar-glass shadow-2xl transform transition-all duration-500 ease-out flex-col ${
+            isRightPanelOpen 
+              ? 'translate-x-0 opacity-100' 
+              : 'translate-x-full opacity-0 pointer-events-none'
+          }`}
+        >
+          {/* Sidebar Header */}
+          <div className="flex-shrink-0 p-4 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">AI Thought Process</h2>
+              <button
+                onClick={toggleSidebar}
+                aria-label="Close sidebar"
+                className="p-2 rounded-full hover:bg-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
         </div>
 
-        {/* Mobile overlay panel */}
-        <div className={`lg:hidden fixed inset-y-0 right-0 z-40 w-80 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out flex flex-col ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ top: '80px' }}>
-          <div className="h-full p-4 overflow-hidden min-h-0 flex flex-col">
+          {/* Sidebar Content with Independent Scrolling */}
+          <div className="flex-1 min-h-0 p-4 sidebar-scroll chat-interface">
             <ThoughtProcess steps={thoughtSteps} />
           </div>
         </div>
 
-        {/* Mobile toggle button */}
+        {/* Desktop Backdrop */}
+        {isRightPanelOpen && (
+          <div 
+            className="hidden lg:block fixed inset-0 bg-black/10 z-backdrop transition-opacity duration-500 ease-out animate-fade-in"
+            style={{ top: '80px' }}
+            onClick={toggleSidebar}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Mobile Sidebar Toggle Button */}
         <button
-          aria-label={isRightPanelOpen ? "Collapse panel" : "Expand panel"}
-          onClick={() => setIsRightPanelOpen((prev) => !prev)}
-          className="lg:hidden fixed top-24 right-4 z-50 bg-primary text-primary-foreground border border-border rounded-full shadow-lg transition-all duration-300 hover:bg-primary/90 hover:shadow-xl w-10 h-10 flex items-center justify-center"
+          aria-label={isRightPanelOpen ? "Close thought process sidebar" : "Open thought process sidebar"}
+          aria-expanded={isRightPanelOpen}
+          aria-controls="mobile-thought-process-sidebar"
+          onClick={toggleSidebar}
+          className="lg:hidden fixed top-24 right-4 z-toggle bg-primary text-primary-foreground border border-border rounded-full shadow-lg toggle-button w-12 h-12 flex items-center justify-center focus-ring"
         >
           {isRightPanelOpen ? (
             <ChevronRight className="w-5 h-5" />
@@ -106,12 +163,43 @@ const Index = () => {
           )}
         </button>
 
-        {/* Mobile backdrop */}
+        {/* Mobile Sidebar Overlay */}
+        <div 
+          id="mobile-thought-process-sidebar"
+          role="complementary"
+          aria-label="Thought process sidebar"
+          className={`lg:hidden fixed inset-y-0 right-0 z-sidebar mobile-sidebar-width bg-background border-l border-border shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+            isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'
+          }`} 
+          style={{ top: '80px' }}
+        >
+          {/* Mobile Sidebar Header */}
+          <div className="flex-shrink-0 p-4 border-b border-border/50">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">AI Thought Process</h2>
+              <button
+                onClick={toggleSidebar}
+                aria-label="Close sidebar"
+                className="p-2 rounded-full hover:bg-muted transition-colors duration-200 focus-ring"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Mobile Sidebar Content */}
+          <div className="flex-1 min-h-0 p-4 sidebar-scroll">
+            <ThoughtProcess steps={thoughtSteps} />
+          </div>
+        </div>
+
+        {/* Mobile Backdrop */}
         {isRightPanelOpen && (
           <div 
-            className="lg:hidden fixed inset-0 bg-black/20 z-30"
+            className="lg:hidden fixed inset-0 bg-black/30 z-backdrop transition-opacity duration-300 animate-fade-in"
             style={{ top: '80px' }}
-            onClick={() => setIsRightPanelOpen(false)}
+            onClick={toggleSidebar}
+            aria-hidden="true"
           />
         )}
       </div>

@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { LeftoverItem } from "@/data/schema";
 import { FunctionHandlerArgs, sanitizeDataForDisplay } from "./handlerUtils";
@@ -7,7 +6,17 @@ export const handleLeftoversCrudFunctions = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs
 ): Promise<string> => {
-  const { addThoughtStep, onGetLeftovers, onAddLeftover, onUpdateLeftover, onRemoveLeftover } = args;
+  const { 
+    addThoughtStep, 
+    onGetLeftovers, 
+    onCreateLeftoverItems,
+    onUpdateLeftoverItemPartial, 
+    onDeleteLeftoverItem,
+    // Fallback to legacy handlers if CRUD not available
+    onAddLeftover, 
+    onUpdateLeftover, 
+    onRemoveLeftover 
+  } = args;
   let funcResultMsg = "";
 
   // GET - Retrieve leftover items
@@ -45,7 +54,12 @@ export const handleLeftoversCrudFunctions = async (
   else if (functionCall.name === "createLeftoverItems") {
     try {
       const { items } = functionCall.args as { items: Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>[] };
-      if (onAddLeftover) {
+      if (onCreateLeftoverItems) {
+        await onCreateLeftoverItems(items);
+        const mealNames = items.map(item => item.meal_name).join(', ');
+        funcResultMsg = `I've added ${items.length} new leftover item(s): ${mealNames}.`;
+      } else if (onAddLeftover) {
+        // Fallback to legacy handler
         for (const item of items) {
           await onAddLeftover(item);
         }
@@ -68,8 +82,12 @@ export const handleLeftoversCrudFunctions = async (
         leftover_id: string; 
         leftover_data: { meal_name: string; servings: number; notes?: string; }
       };
-      if (onUpdateLeftover) {
+      if (onUpdateLeftoverItemPartial) {
         // For PUT, we replace all fields of the leftover
+        await onUpdateLeftoverItemPartial(leftover_id, leftover_data);
+        funcResultMsg = `I've completely replaced the leftover item with ID ${leftover_id}.`;
+      } else if (onUpdateLeftover) {
+        // Fallback to legacy handler
         await onUpdateLeftover(leftover_id, leftover_data);
         funcResultMsg = `I've completely replaced the leftover item with ID ${leftover_id}.`;
       } else {
@@ -89,7 +107,12 @@ export const handleLeftoversCrudFunctions = async (
         leftover_id: string; 
         updates: { meal_name?: string; servings?: number; notes?: string; }
       };
-      if (onUpdateLeftover) {
+      if (onUpdateLeftoverItemPartial) {
+        await onUpdateLeftoverItemPartial(leftover_id, updates);
+        const updatedFields = Object.keys(updates).join(', ');
+        funcResultMsg = `I've updated the following fields for leftover ${leftover_id}: ${updatedFields}.`;
+      } else if (onUpdateLeftover) {
+        // Fallback to legacy handler
         await onUpdateLeftover(leftover_id, updates);
         const updatedFields = Object.keys(updates).join(', ');
         funcResultMsg = `I've updated the following fields for leftover ${leftover_id}: ${updatedFields}.`;
@@ -107,7 +130,11 @@ export const handleLeftoversCrudFunctions = async (
   else if (functionCall.name === "deleteLeftoverItem") {
     try {
       const { leftover_id } = functionCall.args as { leftover_id: string };
-      if (onRemoveLeftover) {
+      if (onDeleteLeftoverItem) {
+        await onDeleteLeftoverItem(leftover_id);
+        funcResultMsg = `I've deleted the leftover item with ID ${leftover_id}.`;
+      } else if (onRemoveLeftover) {
+        // Fallback to legacy handler
         await onRemoveLeftover(leftover_id);
         funcResultMsg = `I've deleted the leftover item with ID ${leftover_id}.`;
       } else {

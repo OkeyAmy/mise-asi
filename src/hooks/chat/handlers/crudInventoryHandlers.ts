@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 
@@ -6,7 +5,13 @@ export const handleInventoryCrudFunctions = async (
   functionCall: FunctionCall,
   args: FunctionHandlerArgs
 ): Promise<string> => {
-  const { addThoughtStep, onUpdateInventory, onGetInventory } = args;
+  const { 
+    addThoughtStep, 
+    onGetInventory, 
+    onCreateInventoryItems,
+    onUpdateInventoryItem, 
+    onDeleteInventoryItem 
+  } = args;
   let funcResultMsg = "";
 
   // GET - Retrieve inventory items
@@ -44,11 +49,12 @@ export const handleInventoryCrudFunctions = async (
   else if (functionCall.name === "createInventoryItems") {
     try {
       const { items } = functionCall.args as { items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[] };
-      if (onUpdateInventory) {
-        await onUpdateInventory(items);
-        funcResultMsg = `I've created ${items.length} new inventory item(s).`;
+      if (onCreateInventoryItems) {
+        await onCreateInventoryItems(items);
+        const itemNames = items.map(item => item.item_name).join(', ');
+        funcResultMsg = `I've created ${items.length} new inventory item(s): ${itemNames}.`;
       } else {
-        funcResultMsg = "Inventory function is not available right now.";
+        funcResultMsg = "Create inventory function is not available right now.";
       }
     } catch (e) {
       console.error(e);
@@ -64,14 +70,12 @@ export const handleInventoryCrudFunctions = async (
         item_id: string; 
         item_data: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }
       };
-      if (onUpdateInventory) {
+      if (onUpdateInventoryItem) {
         // For PUT, we replace the entire item with new data
-        // We need to use upsertItem which handles the ID internally
-        const itemWithId = { ...item_data };
-        await onUpdateInventory([itemWithId]);
+        await onUpdateInventoryItem(item_id, item_data);
         funcResultMsg = `I've completely replaced the inventory item with ID ${item_id}.`;
       } else {
-        funcResultMsg = "Inventory function is not available right now.";
+        funcResultMsg = "Update inventory function is not available right now.";
       }
     } catch (e) {
       console.error(e);
@@ -87,23 +91,14 @@ export const handleInventoryCrudFunctions = async (
         item_id: string; 
         updates: { item_name?: string; quantity?: number; unit?: string; category?: string; location?: string; notes?: string; }
       };
-      if (onUpdateInventory) {
+      if (onUpdateInventoryItem) {
         // For PATCH, we only update the specified fields
-        // We need to merge updates with minimal required fields
-        const updateData = { 
-          item_name: updates.item_name || "",
-          quantity: updates.quantity || 0,
-          unit: updates.unit || "",
-          category: updates.category || "",
-          location: updates.location,
-          notes: updates.notes
-        };
-        await onUpdateInventory([updateData]);
+        await onUpdateInventoryItem(item_id, updates);
         
         const updatedFields = Object.keys(updates).join(', ');
         funcResultMsg = `I've updated the following fields for inventory item ${item_id}: ${updatedFields}.`;
       } else {
-        funcResultMsg = "Inventory function is not available right now.";
+        funcResultMsg = "Update inventory function is not available right now.";
       }
     } catch (e) {
       console.error(e);
@@ -116,17 +111,11 @@ export const handleInventoryCrudFunctions = async (
   else if (functionCall.name === "deleteInventoryItem") {
     try {
       const { item_id } = functionCall.args as { item_id: string };
-      if (onUpdateInventory) {
-        // Set quantity to 0 to trigger deletion logic
-        await onUpdateInventory([{ 
-          item_name: "", 
-          quantity: 0, 
-          unit: "", 
-          category: "" 
-        }]);
+      if (onDeleteInventoryItem) {
+        await onDeleteInventoryItem(item_id);
         funcResultMsg = `I've deleted the inventory item with ID ${item_id}.`;
       } else {
-        funcResultMsg = "Inventory function is not available right now.";
+        funcResultMsg = "Delete inventory function is not available right now.";
       }
     } catch (e) {
       console.error(e);
