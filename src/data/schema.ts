@@ -26,11 +26,9 @@ export interface MealPlan {
 }
 
 export interface ShoppingListItem {
-  id: string;
   item: string;
   quantity: number;
   unit: string;
-  completed?: boolean;
 }
 
 export interface ThoughtStep {
