@@ -7,9 +7,16 @@ import { ShoppingList } from "./ShoppingList";
 import { LeftoversDialog } from "./LeftoversDialog";
 import { MealPlan } from "./MealPlan";
 import { useChat } from "@/hooks/useChat";
+import { useShoppingList } from "@/hooks/useShoppingList";
 import { MealPlan as MealPlanType, ThoughtStep } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
 import { AmazonProductView } from "./AmazonProductView";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 interface ChatbotProps {
   plan: MealPlanType;
@@ -61,6 +68,8 @@ export const Chatbot = ({
     thoughtSteps,
   });
 
+  const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -88,15 +97,14 @@ export const Chatbot = ({
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <ChatHeader onReset={resetConversation} />
+      <ChatHeader />
       
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex-1 overflow-hidden">
             <ChatMessageList 
               messages={messages} 
-              isThinking={isThinking} 
-              thoughtSteps={thoughtSteps}
+              isThinking={isThinking}
             />
             <div ref={messagesEndRef} />
           </div>
@@ -105,7 +113,6 @@ export const Chatbot = ({
             <ChatInput
               inputValue={inputValue}
               setInputValue={setInputValue}
-              onSendMessage={handleSendMessage}
               isThinking={isThinking}
             />
           </div>
@@ -116,11 +123,19 @@ export const Chatbot = ({
         </div>
       </div>
 
-      <ShoppingList
-        isOpen={isShoppingListOpen}
-        onClose={() => setIsShoppingListOpen(false)}
-        session={session}
-      />
+      <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Shopping List</DialogTitle>
+          </DialogHeader>
+          <ShoppingList
+            items={shoppingListItems || []}
+            onRemove={removeItem}
+            onUpdate={updateItem}
+            session={session}
+          />
+        </DialogContent>
+      </Dialog>
 
       <LeftoversDialog
         isOpen={isLeftoversOpen}
@@ -131,7 +146,6 @@ export const Chatbot = ({
       <AmazonProductView
         isOpen={isAmazonProductViewOpen}
         onClose={() => setIsAmazonProductViewOpen(false)}
-        session={session}
       />
     </div>
   );
