@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -174,16 +173,26 @@ const deleteCachedSearchResults = async (productQuery: string, country: string =
   }
 };
 
-// New function to delete individual product from cache
+// Updated function to delete individual product from cache using extracted_products
 const deleteProductFromCache = async (productQuery: string, asin: string, country: string = "US") => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return;
 
   // Get current cached results
-  const cachedData = await getCachedSearchResults(productQuery, country);
-  if (!cachedData) return;
+  const { data: cachedData, error: fetchError } = await supabase
+    .from('amazon_search_cache')
+    .select('extracted_products')
+    .eq('user_id', user.user.id)
+    .eq('product_query', productQuery.toLowerCase())
+    .eq('country', country)
+    .single();
 
-  const currentResults = cachedData.search_results as AmazonProduct[];
+  if (fetchError || !cachedData) {
+    console.error('Error fetching cached data:', fetchError);
+    return;
+  }
+
+  const currentResults = cachedData.extracted_products as AmazonProduct[];
   
   // Filter out the product with the specified ASIN
   const updatedResults = currentResults.filter(product => product.asin !== asin);
@@ -192,11 +201,12 @@ const deleteProductFromCache = async (productQuery: string, asin: string, countr
     // If no products left, delete the entire cache entry
     await deleteCachedSearchResults(productQuery, country);
   } else {
-    // Update cache with remaining products
+    // Update both search_results and extracted_products with remaining products
     const { error } = await supabase
       .from('amazon_search_cache')
       .update({
         search_results: updatedResults as unknown as any,
+        extracted_products: updatedResults as unknown as any,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', user.user.id)
@@ -352,46 +362,34 @@ export const handleAmazonSearchFunctions = async (
   return funcResultMsg;
 };
 
-// Export function to get cached results for UI components
+// Updated function to get cached results for UI components using extracted_products
 export const getAmazonSearchCache = async (productName?: string): Promise<AmazonProduct[]> => {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return [];
 
   if (productName) {
-    // Try to get cached data for the specific product
-    const cachedData = await getCachedSearchResults(productName);
-    if (!cachedData || !cachedData.search_results) {
+    // Get cached data for the specific product using extracted_products
+    const { data: cachedData, error } = await supabase
+      .from('amazon_search_cache')
+      .select('extracted_products')
+      .eq('user_id', user.user.id)
+      .eq('product_query', productName.toLowerCase())
+      .single();
+
+    if (error || !cachedData?.extracted_products) {
       console.log(`No cached data found for product: ${productName}`);
       return [];
     }
     
-    // Parse the JSON data from the database
-    let searchResults;
-    if (typeof cachedData.search_results === 'string') {
-      try {
-        searchResults = JSON.parse(cachedData.search_results);
-      } catch (error) {
-        console.error('Error parsing search results JSON:', error);
-        return [];
-      }
-    } else {
-      searchResults = cachedData.search_results;
-    }
-    
-    // Ensure we're working with an array of products
-    if (Array.isArray(searchResults)) {
-      console.log(`Found ${searchResults.length} cached products for: ${productName}`);
-      return searchResults as AmazonProduct[];
-    }
-    
-    console.log('Search results is not an array:', typeof searchResults);
-    return [];
+    const extractedProducts = cachedData.extracted_products as AmazonProduct[];
+    console.log(`Found ${extractedProducts.length} cached products for: ${productName}`);
+    return extractedProducts;
   }
 
-  // Get all cached results for the user
+  // Get all cached results for the user using extracted_products
   const { data: allCached, error } = await supabase
     .from('amazon_search_cache')
-    .select('*')
+    .select('extracted_products')
     .eq('user_id', user.user.id);
 
   if (error || !allCached) {
@@ -399,25 +397,11 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
     return [];
   }
   
-  // Flatten all search results from all cached searches
+  // Flatten all extracted products from all cached searches
   const allResults: AmazonProduct[] = [];
   allCached.forEach((cache: any) => {
-    if (cache.search_results) {
-      let searchResults;
-      if (typeof cache.search_results === 'string') {
-        try {
-          searchResults = JSON.parse(cache.search_results);
-        } catch (error) {
-          console.error('Error parsing cached search results:', error);
-          return;
-        }
-      } else {
-        searchResults = cache.search_results;
-      }
-      
-      if (Array.isArray(searchResults)) {
-        allResults.push(...(searchResults as AmazonProduct[]));
-      }
+    if (cache.extracted_products && Array.isArray(cache.extracted_products)) {
+      allResults.push(...(cache.extracted_products as AmazonProduct[]));
     }
   });
   

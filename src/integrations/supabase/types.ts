@@ -13,6 +13,7 @@ export type Database = {
         Row: {
           country: string
           created_at: string
+          extracted_products: Json | null
           id: string
           product_query: string
           search_results: Json
@@ -22,6 +23,7 @@ export type Database = {
         Insert: {
           country?: string
           created_at?: string
+          extracted_products?: Json | null
           id?: string
           product_query: string
           search_results: Json
@@ -31,6 +33,7 @@ export type Database = {
         Update: {
           country?: string
           created_at?: string
+          extracted_products?: Json | null
           id?: string
           product_query?: string
           search_results?: Json
@@ -331,7 +334,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      extract_amazon_product_fields: {
+        Args: { search_results: Json }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
