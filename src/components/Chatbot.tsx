@@ -8,6 +8,7 @@ import { LeftoversDialog } from "./LeftoversDialog";
 import { MealPlan } from "./MealPlan";
 import { useChat } from "@/hooks/useChat";
 import { useShoppingList } from "@/hooks/useShoppingList";
+import { useLeftovers } from "@/hooks/useLeftovers";
 import { MealPlan as MealPlanType, ThoughtStep } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
 import { AmazonProductView } from "./AmazonProductView";
@@ -69,6 +70,7 @@ export const Chatbot = ({
   });
 
   const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");
+  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover } = useLeftovers(session);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -95,9 +97,13 @@ export const Chatbot = ({
     }
   }, [pendingMessage, isThinking, setInputValue, onMessageSent]);
 
+  const handleUpdateLeftoverServings = (id: string, servings: number) => {
+    updateLeftover(id, { servings });
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
-      <ChatHeader />
+      <ChatHeader onResetConversation={resetConversation} />
       
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col min-w-0">
@@ -113,6 +119,7 @@ export const Chatbot = ({
             <ChatInput
               inputValue={inputValue}
               setInputValue={setInputValue}
+              handleSendMessage={handleSendMessage}
               isThinking={isThinking}
             />
           </div>
@@ -137,15 +144,24 @@ export const Chatbot = ({
         </DialogContent>
       </Dialog>
 
-      <LeftoversDialog
-        isOpen={isLeftoversOpen}
-        onClose={() => setIsLeftoversOpen(false)}
-        session={session}
-      />
+      <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Leftovers</DialogTitle>
+          </DialogHeader>
+          <LeftoversDialog
+            items={leftoverItems || []}
+            isLoading={leftoverLoading}
+            onRemove={removeLeftover}
+            onUpdateServings={handleUpdateLeftoverServings}
+          />
+        </DialogContent>
+      </Dialog>
 
       <AmazonProductView
         isOpen={isAmazonProductViewOpen}
         onClose={() => setIsAmazonProductViewOpen(false)}
+        productName=""
       />
     </div>
   );
