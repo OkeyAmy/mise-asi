@@ -1,3 +1,4 @@
+
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 
@@ -12,6 +13,15 @@ export const handleInventoryCrudFunctions = async (
     onUpdateInventoryItem, 
     onDeleteInventoryItem 
   } = args;
+  
+  console.log("🔧 CRUD Inventory Handler Called:", functionCall.name);
+  console.log("🔧 Available callbacks:", {
+    onGetInventory: !!onGetInventory,
+    onCreateInventoryItems: !!onCreateInventoryItems,
+    onUpdateInventoryItem: !!onUpdateInventoryItem,
+    onDeleteInventoryItem: !!onDeleteInventoryItem,
+  });
+  
   let funcResultMsg = "";
 
   // GET - Retrieve inventory items
@@ -40,7 +50,7 @@ export const handleInventoryCrudFunctions = async (
         funcResultMsg = "Inventory function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error getting inventory:", e);
       funcResultMsg = "I had trouble retrieving your inventory.";
     }
   }
@@ -49,15 +59,19 @@ export const handleInventoryCrudFunctions = async (
   else if (functionCall.name === "createInventoryItems") {
     try {
       const { items } = functionCall.args as { items: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }[] };
+      console.log("📝 Creating inventory items:", items);
+      
       if (onCreateInventoryItems) {
         await onCreateInventoryItems(items);
         const itemNames = items.map(item => item.item_name).join(', ');
-        funcResultMsg = `I've created ${items.length} new inventory item(s): ${itemNames}.`;
+        funcResultMsg = `I've added ${items.length} new inventory item(s): ${itemNames}. You can see them in your inventory now.`;
+        console.log("✅ Successfully created inventory items");
       } else {
+        console.log("❌ onCreateInventoryItems callback not available");
         funcResultMsg = "Create inventory function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error creating inventory items:", e);
       funcResultMsg = "I had trouble creating the inventory items.";
     }
     addThoughtStep("✅ Created inventory items");
@@ -70,15 +84,19 @@ export const handleInventoryCrudFunctions = async (
         item_id: string; 
         item_data: { item_name: string; quantity: number; unit: string; category: string; location?: string; notes?: string; }
       };
+      console.log("🔄 Replacing entire inventory item:", { item_id, item_data });
+      
       if (onUpdateInventoryItem) {
         // For PUT, we replace the entire item with new data
         await onUpdateInventoryItem(item_id, item_data);
-        funcResultMsg = `I've completely replaced the inventory item with ID ${item_id}.`;
+        funcResultMsg = `I've completely replaced the inventory item with ID ${item_id}. The changes are now visible in your inventory.`;
+        console.log("✅ Successfully replaced inventory item");
       } else {
+        console.log("❌ onUpdateInventoryItem callback not available");
         funcResultMsg = "Update inventory function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error replacing inventory item:", e);
       funcResultMsg = "I had trouble replacing the inventory item.";
     }
     addThoughtStep("✅ Replaced inventory item");
@@ -91,17 +109,21 @@ export const handleInventoryCrudFunctions = async (
         item_id: string; 
         updates: { item_name?: string; quantity?: number; unit?: string; category?: string; location?: string; notes?: string; }
       };
+      console.log("📝 Updating inventory item:", { item_id, updates });
+      
       if (onUpdateInventoryItem) {
         // For PATCH, we only update the specified fields
         await onUpdateInventoryItem(item_id, updates);
         
         const updatedFields = Object.keys(updates).join(', ');
-        funcResultMsg = `I've updated the following fields for inventory item ${item_id}: ${updatedFields}.`;
+        funcResultMsg = `I've updated the following fields for inventory item ${item_id}: ${updatedFields}. You can see the changes in your inventory now.`;
+        console.log("✅ Successfully updated inventory item");
       } else {
+        console.log("❌ onUpdateInventoryItem callback not available");
         funcResultMsg = "Update inventory function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error updating inventory item:", e);
       funcResultMsg = "I had trouble updating the inventory item.";
     }
     addThoughtStep("✅ Updated inventory item");
@@ -111,18 +133,23 @@ export const handleInventoryCrudFunctions = async (
   else if (functionCall.name === "deleteInventoryItem") {
     try {
       const { item_id } = functionCall.args as { item_id: string };
+      console.log("🗑️ Deleting inventory item:", item_id);
+      
       if (onDeleteInventoryItem) {
         await onDeleteInventoryItem(item_id);
-        funcResultMsg = `I've deleted the inventory item with ID ${item_id}.`;
+        funcResultMsg = `I've deleted the inventory item with ID ${item_id}. It has been removed from your inventory.`;
+        console.log("✅ Successfully deleted inventory item");
       } else {
+        console.log("❌ onDeleteInventoryItem callback not available");
         funcResultMsg = "Delete inventory function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error deleting inventory item:", e);
       funcResultMsg = "I had trouble deleting the inventory item.";
     }
     addThoughtStep("✅ Deleted inventory item");
   }
 
+  console.log("🏁 CRUD Inventory Handler Result:", funcResultMsg);
   return funcResultMsg;
 };

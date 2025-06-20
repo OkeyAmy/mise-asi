@@ -1,3 +1,4 @@
+
 import { Session } from "@supabase/supabase-js";
 import { useShoppingList } from "@/hooks/useShoppingList";
 import { useInventory } from "@/hooks/useInventory";
