@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlers/handlerUtils";
 import { handleInventoryFunctions } from "./handlers/inventoryHandlers";
@@ -12,7 +11,6 @@ import { handleInventoryCrudFunctions } from "./handlers/crudInventoryHandlers";
 import { handleShoppingListCrudFunctions } from "./handlers/crudShoppingListHandlers";
 import { handlePreferencesCrudFunctions } from "./handlers/crudPreferencesHandlers";
 import { handleLeftoversCrudFunctions } from "./handlers/crudLeftoversHandlers";
-import { handleAmazonSearchFunctions } from "./handlers/amazonSearchHandlers";
 
 // Function handler mapping - each function is handled independently and can be called in parallel
 const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: FunctionHandlerArgs) => Promise<string> } = {
@@ -62,12 +60,6 @@ const functionHandlers: { [key: string]: (functionCall: FunctionCall, args: Func
   replaceLeftoverItem: handleLeftoversCrudFunctions,
   updateLeftoverItemPartial: handleLeftoversCrudFunctions,
   deleteLeftoverItem: handleLeftoversCrudFunctions,
-
-  // Amazon Search handlers
-  searchAmazonProduct: handleAmazonSearchFunctions,
-  searchMultipleAmazonProducts: handleAmazonSearchFunctions,
-  getAmazonSearchResults: handleAmazonSearchFunctions,
-  clearAmazonSearchCache: handleAmazonSearchFunctions,
 };
 
 /**
