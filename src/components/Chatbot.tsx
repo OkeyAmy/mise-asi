@@ -47,6 +47,11 @@ export const Chatbot = ({
 
   const chatData = useChatData(userSession, plan.plan_id);
 
+  console.log("🔐 Chatbot userSession:", userSession?.user?.id);
+  console.log("📋 Chatbot plan.plan_id:", plan.plan_id);
+  console.log("🛒 chatData.shoppingList available:", !!chatData.shoppingList);
+  console.log("🛒 chatData.shoppingList.removeItems available:", !!chatData.shoppingList?.removeItems);
+
   const {
     messages,
     inputValue,
@@ -66,8 +71,16 @@ export const Chatbot = ({
       toast.success("I've updated your shopping list.");
     },
     onRemoveItemsFromShoppingList: async (itemNames) => {
-      await chatData.shoppingList.removeItems(itemNames);
-      toast.success("I've removed the items from your shopping list.");
+      console.log("🔧 onRemoveItemsFromShoppingList callback called with:", itemNames);
+      console.log("📋 chatData.shoppingList.removeItems function available:", !!chatData.shoppingList.removeItems);
+      try {
+        await chatData.shoppingList.removeItems(itemNames);
+        console.log("✅ chatData.shoppingList.removeItems completed successfully");
+        toast.success("I've removed the items from your shopping list.");
+      } catch (error) {
+        console.error("❌ Error in onRemoveItemsFromShoppingList:", error);
+        toast.error("Failed to remove items from shopping list.");
+      }
     },
     shoppingListItems: chatData.shoppingList.items,
     onUpdateInventory: async (items) => {
@@ -269,6 +282,10 @@ export const Chatbot = ({
             items={chatData.shoppingList.items}
             isLoading={chatData.shoppingList.isLoading}
             onRemove={chatData.shoppingList.removeItem}
+            onUpdate={async (itemName: string, quantity: number, unit: string) => {
+              await chatData.shoppingList.updateItem(itemName, quantity, unit);
+              toast.success("Shopping list updated.");
+            }}
           />
         </DialogContent>
       </Dialog>

@@ -123,10 +123,61 @@ export const useChat = (props: UseChatProps) => {
     setIsThinking(true);
     addThoughtStep("🤔 Thinking...");
 
-    const history: Content[] = newMessages.map((msg) => ({
-      role: msg.sender === "bot" ? "model" : "user",
-      parts: [{ text: msg.text }],
-    }));
+    // Build conversation history including ALL previous function calls and results
+    const history: Content[] = [];
+    
+    for (const msg of newMessages) {
+      if (msg.sender === "user") {
+        history.push({
+          role: "user",
+          parts: [{ text: msg.text }],
+        });
+      } else {
+        // Bot message
+        const parts: Part[] = [];
+        
+        // Add the text response
+        if (msg.text) {
+          parts.push({ text: msg.text });
+        }
+        
+        // Add any function calls that were made
+        if (msg.functionCalls) {
+          console.log(`📋 Adding previous function calls to AI memory:`, msg.functionCalls.map(fc => fc.name));
+          for (const fc of msg.functionCalls) {
+            parts.push({
+              functionCall: {
+                name: fc.name,
+                args: fc.arguments,
+              },
+            });
+          }
+        }
+        
+        if (parts.length > 0) {
+          history.push({
+            role: "model",
+            parts,
+          });
+        }
+        
+        // Add function results as user messages (this is how Gemini expects them)
+        if (msg.functionResults) {
+          console.log(`📊 Adding previous function results to AI memory:`, msg.functionResults.map(fr => `${fr.functionName}: ${JSON.stringify(fr.result).substring(0, 100)}...`));
+          const functionResponseParts: Part[] = msg.functionResults.map(result => ({
+            functionResponse: {
+              name: result.functionName,
+              response: { success: true, message: result.result },
+            },
+          }));
+          
+          history.push({
+            role: "user",
+            parts: functionResponseParts,
+          });
+        }
+      }
+    }
 
     try {
       const response = await callGeminiProxy(history);
@@ -138,16 +189,32 @@ export const useChat = (props: UseChatProps) => {
       if (functionCalls.length > 0) {
         addThoughtStep(`🔨 Calling functions: ${functionCalls.map(c => c.name).join(', ')}`);
         
+        // Store function calls with unique IDs
+        const functionCallsWithIds = functionCalls.map((call: any) => ({
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: call.name,
+          arguments: call.args || {},
+        }));
+        
         // Execute all function calls in parallel for maximum efficiency
-        // This allows simultaneous data gathering (e.g., getUserPreferences + getInventory + getLeftovers + getCurrentTime)
-        const functionExecutionPromises = functionCalls.map((call: any) => 
-          handleFunctionCall(call, { ...functionHandlerArgs, addThoughtStep })
+        const functionExecutionPromises = functionCallsWithIds.map((call) => 
+          handleFunctionCall(
+            { name: call.name, args: call.arguments }, 
+            { ...functionHandlerArgs, addThoughtStep }
+          )
         );
 
         // Wait for all functions to complete in parallel
         const functionResults = await Promise.all(functionExecutionPromises);
 
-        // Prepare the conversation history with function calls and results
+        // Store function results
+        const functionResultsWithIds = functionCallsWithIds.map((call, i) => ({
+          functionCallId: call.id,
+          functionName: call.name,
+          result: functionResults[i],
+        }));
+
+        // Prepare the conversation history with function calls and results for final response
         const modelTurnParts: Part[] = functionCalls.map((fc: any) => ({ functionCall: fc }));
         const userTurnParts: Part[] = functionCalls.map((fc, i) => ({
           functionResponse: {
@@ -169,7 +236,18 @@ export const useChat = (props: UseChatProps) => {
             .map((p: Part) => p.text)
             .join("") ?? "";
         
-        const botMessage: Message = { id: Date.now() + 1, text: finalText || "I've processed that. What's next?", sender: "bot" };
+        // Create bot message with function calls and results stored for future reference
+        const botMessage: Message = { 
+          id: Date.now() + 1, 
+          text: finalText || "I've processed that. What's next?", 
+          sender: "bot",
+          functionCalls: functionCallsWithIds,
+          functionResults: functionResultsWithIds,
+        };
+        
+        console.log(`💾 Storing function calls in message for future memory:`, functionCallsWithIds.map(fc => fc.name));
+        console.log(`💾 Storing function results in message for future memory:`, functionResultsWithIds.map(fr => `${fr.functionName}: success`));
+        
         setMessages(prev => [...prev, botMessage]);
 
       } else {

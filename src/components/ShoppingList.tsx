@@ -3,7 +3,8 @@ import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
-import { Download, Share2 } from "lucide-react";
+import { Input } from "./ui/input";
+import { Download, Share2, Edit, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -19,12 +20,15 @@ import {
 interface ShoppingListProps {
   items: ShoppingListItem[];
   onRemove: (item: string) => void;
+  onUpdate?: (itemName: string, quantity: number, unit: string) => void;
   isLoading?: boolean;
 }
 
-export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) => {
+export const ShoppingList = ({ items, onRemove, onUpdate, isLoading }: ShoppingListProps) => {
   const [checkedItems, setCheckedItems] = React.useState<Set<string>>(new Set());
   const [itemToRemove, setItemToRemove] = React.useState<ShoppingListItem | null>(null);
+  const [editingItem, setEditingItem] = React.useState<string | null>(null);
+  const [editValues, setEditValues] = React.useState<{ quantity: number; unit: string }>({ quantity: 0, unit: "" });
 
   const handleCheckedChange = (checked: boolean, item: ShoppingListItem) => {
     if (checked) {
@@ -43,6 +47,22 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
 
   const handleRemoveCancel = () => {
     setItemToRemove(null); // Close dialog
+  };
+
+  const handleEditStart = (item: ShoppingListItem) => {
+    setEditingItem(item.item);
+    setEditValues({ quantity: item.quantity, unit: item.unit });
+  };
+
+  const handleEditSave = () => {
+    if (editingItem && onUpdate) {
+      onUpdate(editingItem, editValues.quantity, editValues.unit);
+    }
+    setEditingItem(null);
+  };
+
+  const handleEditCancel = () => {
+    setEditingItem(null);
   };
 
   const formatShoppingList = () => {
@@ -88,7 +108,7 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
         <CardHeader>
           <CardTitle>Your Smart Shopping List</CardTitle>
           <CardDescription>
-            Only items you need for your meal plan are listed here.
+            Only items you need for your meal plan are listed here. Click edit to adjust quantities.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,9 +117,9 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
             {items.map((item) => (
               <div
                 key={`${item.item}-${item.unit}`}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-muted"
+                className="flex items-center justify-between p-2 rounded-md hover:bg-muted group"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <Checkbox
                     id={`${item.item}-${item.unit}`}
                     checked={checkedItems.has(item.item) || itemToRemove?.item === item.item}
@@ -110,15 +130,58 @@ export const ShoppingList = ({ items, onRemove, isLoading }: ShoppingListProps) 
                   <label
                     htmlFor={`${item.item}-${item.unit}`}
                     className={cn(
-                      "text-sm font-medium leading-none transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                      "text-sm font-medium leading-none transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1",
                       (checkedItems.has(item.item) || itemToRemove?.item === item.item) && "line-through text-muted-foreground"
                     )}
                   >
                     {item.item}
                   </label>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {item.quantity} {item.unit}
+                
+                {/* Quantity/Unit Display or Edit Mode */}
+                <div className="flex items-center gap-2">
+                  {editingItem === item.item ? (
+                    // Edit mode
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={editValues.quantity}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+                        className="w-16 h-8 text-sm"
+                        min="0"
+                        step="0.1"
+                      />
+                      <Input
+                        value={editValues.unit}
+                        onChange={(e) => setEditValues(prev => ({ ...prev, unit: e.target.value }))}
+                        className="w-20 h-8 text-sm"
+                        placeholder="unit"
+                      />
+                      <Button size="sm" variant="ghost" onClick={handleEditSave} className="h-8 w-8 p-0">
+                        <Check className="h-4 w-4 text-green-600" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={handleEditCancel} className="h-8 w-8 p-0">
+                        <X className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
+                  ) : (
+                    // Display mode
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-muted-foreground">
+                        {item.quantity} {item.unit}
+                      </div>
+                      {onUpdate && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => handleEditStart(item)}
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

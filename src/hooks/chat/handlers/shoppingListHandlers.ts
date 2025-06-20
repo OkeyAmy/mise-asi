@@ -51,14 +51,20 @@ export const handleShoppingListFunctions = async (
   } else if (functionCall.name === "removeFromShoppingList") {
     try {
       const { item_names } = functionCall.args as { item_names: string[] };
+      console.log("🔧 Legacy removeFromShoppingList called with:", item_names);
+      console.log("🔧 onRemoveItemsFromShoppingList callback available:", !!onRemoveItemsFromShoppingList);
+      
       if (onRemoveItemsFromShoppingList) {
+        console.log("🚀 Calling onRemoveItemsFromShoppingList...");
         await onRemoveItemsFromShoppingList(item_names);
+        console.log("✅ onRemoveItemsFromShoppingList completed successfully");
         funcResultMsg = `I've removed ${item_names.join(', ')} from your shopping list.`;
       } else {
+        console.log("❌ onRemoveItemsFromShoppingList callback not available");
         funcResultMsg = "Shopping list function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error in removeFromShoppingList handler:", e);
       funcResultMsg = "I had trouble removing items from your shopping list.";
     }
     addThoughtStep("✅ Executed: removeFromShoppingList");

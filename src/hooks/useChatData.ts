@@ -1,4 +1,3 @@
-
 import { Session } from "@supabase/supabase-js";
 import { useShoppingList } from "@/hooks/useShoppingList";
 import { useInventory } from "@/hooks/useInventory";
@@ -13,9 +12,10 @@ export function useChatData(session: Session | null, mealPlanId: string | undefi
     removeItems,
     addItems,
     saveList,
+    updateItem,
   } = useShoppingList(session, mealPlanId);
 
-  const { items: inventoryItems, upsertItem, updateItem, deleteItem, addItem } = useInventory(session, (item) => {
+  const { items: inventoryItems, upsertItem, updateItem: inventoryUpdateItem, deleteItem, addItem } = useInventory(session, (item) => {
     if (confirm(`You've run out of ${item.item_name}. Would you like to add it to your shopping list?`)) {
       addItems([{
         item: item.item_name,
@@ -44,11 +44,12 @@ export function useChatData(session: Session | null, mealPlanId: string | undefi
       removeItems,
       addItems,
       saveList,
+      updateItem,
     },
     inventory: {
       items: inventoryItems,
       upsertItem,
-      updateItem,
+      updateItem: inventoryUpdateItem,
       deleteItem,
       addItem,
     },

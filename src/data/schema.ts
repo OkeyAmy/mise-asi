@@ -74,4 +74,14 @@ export interface Message {
   id: number;
   text: string;
   sender: "user" | "bot";
+  functionCalls?: Array<{
+    name: string;
+    arguments: Record<string, any>;
+    id: string;
+  }>;
+  functionResults?: Array<{
+    functionCallId: string;
+    functionName: string;
+    result: any;
+  }>;
 }
