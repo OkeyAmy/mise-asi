@@ -1,15 +1,31 @@
 
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 // In-memory cache for Amazon search results
 const amazonSearchCache = new Map<string, any[]>();
 
-// Actual RapidAPI implementation
+// Get RapidAPI key from Supabase secrets
+const getRapidAPIKey = async (): Promise<string> => {
+  const { data, error } = await supabase.functions.invoke('get-secret', {
+    body: { name: 'RAPIDAPI_KEY' }
+  });
+  
+  if (error || !data?.value) {
+    throw new Error('RapidAPI key not found in Supabase secrets');
+  }
+  
+  return data.value;
+};
+
+// Real RapidAPI implementation
 const searchAmazonAPI = async (productQuery: string, country: string = "US") => {
   console.log(`🔍 Searching Amazon for: ${productQuery} in ${country}`);
   
   try {
+    const apiKey = await getRapidAPIKey();
+    
     const url = "https://real-time-amazon-data.p.rapidapi.com/search";
     const querystring = new URLSearchParams({
       query: productQuery,
@@ -22,7 +38,7 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
     });
     
     const headers = {
-      "x-rapidapi-key": "ded0bfcef9mshbbd09372a611d53p1d9631jsn3daeffd314b3",
+      "x-rapidapi-key": apiKey,
       "x-rapidapi-host": "real-time-amazon-data.p.rapidapi.com"
     };
     
@@ -32,43 +48,19 @@ const searchAmazonAPI = async (productQuery: string, country: string = "US") => 
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`Amazon API request failed with status: ${response.status}`);
     }
     
     const data = await response.json();
-    return data.data?.products?.slice(0, 3) || [];
+    
+    if (!data.data || !data.data.products) {
+      throw new Error('Invalid response format from Amazon API');
+    }
+    
+    return data.data.products.slice(0, 3) || [];
   } catch (error) {
-    console.error("RapidAPI search failed:", error);
-    // Fallback to mock data if API fails
-    return [
-      {
-        title: `${productQuery} - Premium Quality`,
-        price: "$12.99",
-        rating: 4.5,
-        reviews_count: 1250,
-        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-        image: "https://via.placeholder.com/200x200",
-        is_prime: true,
-      },
-      {
-        title: `Organic ${productQuery}`,
-        price: "$15.49",
-        rating: 4.7,
-        reviews_count: 890,
-        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-        image: "https://via.placeholder.com/200x200",
-        is_prime: false,
-      },
-      {
-        title: `${productQuery} - Best Seller`,
-        price: "$9.99",
-        rating: 4.3,
-        reviews_count: 2100,
-        url: `https://amazon.com/search?q=${encodeURIComponent(productQuery)}`,
-        image: "https://via.placeholder.com/200x200",
-        is_prime: true,
-      }
-    ];
+    console.error("Amazon API search failed:", error);
+    throw error;
   }
 };
 
@@ -104,8 +96,8 @@ export const handleAmazonSearchFunctions = async (
       }
     } catch (error) {
       console.error("Amazon search error:", error);
-      funcResultMsg = `Sorry, I couldn't search Amazon for that product right now. Please try again later.`;
-      addThoughtStep(`❌ Amazon search failed`);
+      funcResultMsg = `Sorry, I couldn't search Amazon for "${functionCall.args?.product_query}" right now. There was an issue with the search API. Please try again later.`;
+      addThoughtStep(`❌ Amazon search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } else if (functionCall.name === "searchMultipleAmazonProducts") {
     try {
@@ -118,28 +110,39 @@ export const handleAmazonSearchFunctions = async (
       
       let searchedCount = 0;
       let cachedCount = 0;
+      let failedCount = 0;
       
       for (const productQuery of product_queries) {
         const cacheKey = `${productQuery.toLowerCase()}_${country}`;
         
         if (!amazonSearchCache.has(cacheKey)) {
-          const searchResults = await searchAmazonAPI(productQuery, country);
-          amazonSearchCache.set(cacheKey, searchResults);
-          searchedCount++;
-          
-          // Add small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          try {
+            const searchResults = await searchAmazonAPI(productQuery, country);
+            amazonSearchCache.set(cacheKey, searchResults);
+            searchedCount++;
+            
+            // Add small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (error) {
+            console.error(`Failed to search for ${productQuery}:`, error);
+            failedCount++;
+          }
         } else {
           cachedCount++;
         }
       }
       
-      funcResultMsg = `Completed Amazon search for ${product_queries.length} products. Found ${searchedCount} new results, used ${cachedCount} cached results. All products are ready to view with pricing and availability.`;
-      addThoughtStep(`✅ Batch search complete: ${searchedCount} new, ${cachedCount} cached`);
+      if (failedCount > 0) {
+        funcResultMsg = `Completed Amazon search for ${product_queries.length} products. Found ${searchedCount} new results, used ${cachedCount} cached results, ${failedCount} searches failed. Some products may not be available to view.`;
+      } else {
+        funcResultMsg = `Completed Amazon search for ${product_queries.length} products. Found ${searchedCount} new results, used ${cachedCount} cached results. All products are ready to view with pricing and availability.`;
+      }
+      
+      addThoughtStep(`✅ Batch search complete: ${searchedCount} new, ${cachedCount} cached, ${failedCount} failed`);
     } catch (error) {
       console.error("Batch Amazon search error:", error);
-      funcResultMsg = `Sorry, I encountered an issue while searching for multiple products on Amazon. Some results may be available.`;
-      addThoughtStep(`❌ Batch Amazon search partially failed`);
+      funcResultMsg = `Sorry, I encountered an issue while searching for multiple products on Amazon. The search API is currently unavailable. Please try again later.`;
+      addThoughtStep(`❌ Batch Amazon search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } else if (functionCall.name === "getAmazonSearchResults") {
     const { product_name } = functionCall.args as { product_name?: string };
