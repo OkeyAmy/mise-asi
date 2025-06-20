@@ -15,10 +15,28 @@ const Index = () => {
   const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false); // Default to closed for better overlay UX
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
+  const [pendingAIMessage, setPendingAIMessage] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
+
+  // Check for pending AI message from shared shopping list import
+  useEffect(() => {
+    const checkPendingMessage = () => {
+      const message = localStorage.getItem('pendingAIMessage');
+      if (message) {
+        setPendingAIMessage(message);
+        localStorage.removeItem('pendingAIMessage');
+      }
+    };
+
+    // Check immediately and also when the window gains focus
+    checkPendingMessage();
+    window.addEventListener('focus', checkPendingMessage);
+    
+    return () => window.removeEventListener('focus', checkPendingMessage);
+  }, []);
 
   // Handle escape key to close sidebar
   useEffect(() => {
@@ -86,6 +104,8 @@ const Index = () => {
             setThoughtSteps={setThoughtSteps}
             session={session}
             thoughtSteps={thoughtSteps}
+            pendingMessage={pendingAIMessage}
+            onMessageSent={() => setPendingAIMessage(null)}
           />
         </div>
         
