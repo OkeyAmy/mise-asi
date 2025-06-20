@@ -1,6 +1,7 @@
 import { FunctionCall } from "@google/generative-ai";
 import { ShoppingListItem } from "@/data/schema";
 import { FunctionHandlerArgs } from "./handlerUtils";
+import { deleteCachedResults } from "./amazonSearchHandlers";
 
 export const handleShoppingListFunctions = async (
   functionCall: FunctionCall,
@@ -59,6 +60,12 @@ export const handleShoppingListFunctions = async (
         await onRemoveItemsFromShoppingList(item_names);
         console.log("✅ onRemoveItemsFromShoppingList completed successfully");
         funcResultMsg = `I've removed ${item_names.join(', ')} from your shopping list.`;
+        
+        // Amazon cache cleanup
+        for (const item_name of item_names) {
+          await deleteCachedResults(item_name);
+        }
+        console.log("✅ Cleared Amazon cache for removed items");
       } else {
         console.log("❌ onRemoveItemsFromShoppingList callback not available");
         funcResultMsg = "Shopping list function is not available right now.";

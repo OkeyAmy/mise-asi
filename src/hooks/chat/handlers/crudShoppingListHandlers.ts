@@ -1,5 +1,6 @@
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
+import { deleteCachedResults } from "./amazonSearchHandlers";
 
 export const handleShoppingListCrudFunctions = async (
   functionCall: FunctionCall,
@@ -82,6 +83,19 @@ export const handleShoppingListCrudFunctions = async (
         await onReplaceShoppingList(items);
         if (items.length === 0) {
           funcResultMsg = "I've cleared your shopping list completely.";
+          
+          // Amazon cache cleanup - clear all cache when shopping list is cleared
+          try {
+            const { clearAmazonSearchCacheTool } = await import("../../../lib/functions/amazonSearchTools");
+            const { handleAmazonSearchFunctions } = await import("./amazonSearchHandlers");
+            await handleAmazonSearchFunctions(
+              { name: "clearAmazonSearchCache", args: {} },
+              args
+            );
+            console.log("✅ Cleared all Amazon search cache");
+          } catch (error) {
+            console.error("⚠️ Failed to clear Amazon cache:", error);
+          }
         } else {
           funcResultMsg = `I've replaced your shopping list with ${items.length} new item(s).`;
         }
@@ -134,6 +148,11 @@ export const handleShoppingListCrudFunctions = async (
         const itemList = item_names.join(', ');
         funcResultMsg = `I've removed the following item(s) from your shopping list: ${itemList}.`;
         console.log("✅ Successfully deleted shopping list items");
+
+        // Amazon cache cleanup
+        for (const item_name of item_names) {
+          await deleteCachedResults(item_name);
+        }
       } else {
         console.log("❌ onDeleteShoppingListItems callback not available");
         funcResultMsg = "Delete shopping list function is not available right now.";

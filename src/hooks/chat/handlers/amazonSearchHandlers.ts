@@ -21,7 +21,6 @@ interface AmazonProduct {
   sales_volume?: string;
   delivery?: string;
   product_availability?: string;
-  product_availability?: string;
   climate_pledge_friendly?: boolean;
   has_variations?: boolean;
   product_badge?: string;
@@ -261,21 +260,36 @@ export const handleAmazonSearchFunctions = async (
       
       // Check database cache first
       const cachedData = await getCachedSearchResults(product_query, country);
+      let products: AmazonProduct[] = [];
+      
       if (cachedData) {
         addThoughtStep(`📋 Using cached results for ${product_query}`);
-        const cachedResults = cachedData.search_results as unknown as AmazonProduct[];
-        funcResultMsg = `Found ${cachedResults?.length || 0} cached Amazon results for "${product_query}". Results are ready to display.`;
+        products = cachedData.search_results as unknown as AmazonProduct[];
       } else {
         // Perform search and cache results
-        const searchResults = await searchAmazonAPI(product_query, country);
-        await saveCachedSearchResults(product_query, searchResults, country);
+        products = await searchAmazonAPI(product_query, country);
+        await saveCachedSearchResults(product_query, products, country);
+        addThoughtStep(`✅ Found ${products.length} products for ${product_query}`);
+      }
+      
+      // Format product data for AI to use
+      if (products.length > 0) {
+        const productDetails = products.slice(0, 3).map((product, index) => {
+          return `Product ${index + 1}:
+- Title: ${product.product_title || 'Unknown Product'}
+- Price: ${product.product_price || 'Price not available'}
+- Rating: ${product.product_star_rating || 'No rating'} stars (${product.product_num_ratings || 0} reviews)
+- Prime: ${product.is_prime ? 'Yes' : 'No'}
+- Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
+- Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
+- Availability: ${product.product_availability || 'Check on Amazon'}
+- Link: ${product.product_url || 'Link not available'}
+- ASIN: ${product.asin}`;
+        }).join('\n\n');
         
-        const topProduct = searchResults[0];
-        const productTitle = topProduct?.product_title || 'Unknown Product';
-        const productPrice = topProduct?.product_price || 'Price unavailable';
-        
-        funcResultMsg = `Found ${searchResults.length} Amazon products for "${product_query}". Top result: ${productTitle} at ${productPrice}. Results cached for quick access.`;
-        addThoughtStep(`✅ Found ${searchResults.length} products for ${product_query}`);
+        funcResultMsg = `Found ${products.length} Amazon products for "${product_query}". Here are the top 3 results:\n\n${productDetails}`;
+      } else {
+        funcResultMsg = `No products found on Amazon for "${product_query}". You might want to try a different search term.`;
       }
     } catch (error) {
       console.error("Amazon search error:", error);
@@ -329,32 +343,89 @@ export const handleAmazonSearchFunctions = async (
       addThoughtStep(`❌ Batch Amazon search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   } else if (functionCall.name === "getAmazonSearchResults") {
-    const { product_name, search_all } = functionCall.args as { 
+    const { product_name, search_all, country = "US" } = functionCall.args as { 
       product_name?: string; 
       search_all?: boolean;
+      country?: string;
     };
     
     if (search_all) {
       // Get all Amazon products across all searches
-      const allProducts = await getAllCachedAmazonProducts();
+      const allProducts = await getAllCachedAmazonProducts(country);
       if (allProducts.length > 0) {
         const uniqueProducts = allProducts.filter((product, index, self) => 
           index === self.findIndex(p => p.asin === product.asin)
         );
-        funcResultMsg = `Found ${uniqueProducts.length} total Amazon products from all your searches. Products include various categories with prices ranging from budget to premium options. Ready to display detailed product information.`;
+        
+        // Format product data for AI to use (show top 10 products)
+        const productDetails = uniqueProducts.slice(0, 10).map((product, index) => {
+          return `Product ${index + 1}:
+- Title: ${product.product_title || 'Unknown Product'}
+- Price: ${product.product_price || 'Price not available'}
+- Rating: ${product.product_star_rating || 'No rating'} stars (${product.product_num_ratings || 0} reviews)
+- Prime: ${product.is_prime ? 'Yes' : 'No'}
+- Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
+- Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
+- Availability: ${product.product_availability || 'Check on Amazon'}
+- Link: ${product.product_url || 'Link not available'}
+- ASIN: ${product.asin}`;
+        }).join('\n\n');
+        
+        funcResultMsg = `Found ${uniqueProducts.length} total Amazon products from all your searches. Here are the top 10 results:\n\n${productDetails}`;
       } else {
         funcResultMsg = `No Amazon products found in your search history. Try searching for some products first.`;
       }
     } else if (product_name) {
-      // Search for specific product name in cached data
-      const matchingProducts = await searchCachedAmazonData(product_name);
+        addThoughtStep(`Looking for Amazon products matching "${product_name}"`);
+        // First, check for an exact match in the cache
+        const cachedData = await getCachedSearchResults(product_name, country);
+        let matchingProducts: AmazonProduct[] = [];
+  
+        if (cachedData && cachedData.search_results && Array.isArray(cachedData.search_results) && cachedData.search_results.length > 0) {
+          addThoughtStep(`🎯 Found exact match in cache for "${product_name}"`);
+          matchingProducts = cachedData.search_results as unknown as AmazonProduct[];
+        } else {
+          // If no exact match, search the API
+          addThoughtStep(`🤔 No exact cache match for "${product_name}". Searching Amazon directly.`);
+          try {
+            const searchResults = await searchAmazonAPI(product_name, country);
+            await saveCachedSearchResults(product_name, searchResults, country);
+            matchingProducts = searchResults;
+            if(searchResults.length > 0) {
+              addThoughtStep(`✅ Found ${searchResults.length} products for "${product_name}"`);
+            } else {
+              addThoughtStep(`🤷 No products found on Amazon for "${product_name}"`);
+            }
+          } catch (error) {
+            console.error(`Amazon search error during getAmazonSearchResults for "${product_name}":`, error);
+            funcResultMsg = `Sorry, I couldn't search Amazon for "${product_name}" right now. There was an issue with the search API. Please try again later.`;
+            addThoughtStep(`❌ Amazon search failed for "${product_name}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return funcResultMsg;
+          }
+        }
+  
       if (matchingProducts.length > 0) {
         const uniqueProducts = matchingProducts.filter((product, index, self) => 
           index === self.findIndex(p => p.asin === product.asin)
         );
-        funcResultMsg = `Found ${uniqueProducts.length} Amazon products matching "${product_name}" in your cached searches. Products include detailed information like pricing, ratings, and availability. Ready to display results.`;
+        
+        // Format product data for AI to use
+        const productDetails = uniqueProducts.slice(0, 3).map((product, index) => {
+          return `Product ${index + 1}:
+- Title: ${product.product_title || 'Unknown Product'}
+- Price: ${product.product_price || 'Price not available'}
+- Rating: ${product.product_star_rating || 'No rating'} stars (${product.product_num_ratings || 0} reviews)
+- Prime: ${product.is_prime ? 'Yes' : 'No'}
+- Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
+- Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
+- Availability: ${product.product_availability || 'Check on Amazon'}
+- Link: ${product.product_url || 'Link not available'}
+- ASIN: ${product.asin}`;
+        }).join('\n\n');
+        
+        funcResultMsg = `Found ${uniqueProducts.length} Amazon products for "${product_name}". Here are the top 3 results:\n\n${productDetails}`;
       } else {
-        funcResultMsg = `No Amazon products found matching "${product_name}" in your search history. Try searching for this product first or check if the product name is spelled correctly.`;
+          funcResultMsg = `I couldn't find any products on Amazon matching "${product_name}". You might want to try a different search term.`;
       }
     } else {
       // Get summary of all cached searches

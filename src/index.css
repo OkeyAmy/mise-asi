@@ -326,4 +326,135 @@
   .min-h-0-important {
     min-height: 0 !important;
   }
+
+  /* Highlight.js syntax highlighting styles */
+  .hljs {
+    background: hsl(var(--muted)) !important;
+    color: hsl(var(--foreground)) !important;
+    padding: 0 !important;
+  }
+
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-built_in,
+  .hljs-name,
+  .hljs-tag {
+    color: hsl(var(--foreground)) !important;
+    font-weight: 600;
+  }
+
+  .hljs-string,
+  .hljs-title,
+  .hljs-section,
+  .hljs-attribute,
+  .hljs-literal,
+  .hljs-template-tag,
+  .hljs-template-variable,
+  .hljs-type,
+  .hljs-addition {
+    color: hsl(142 76% 36%) !important; /* Green for strings */
+  }
+
+  .hljs-comment,
+  .hljs-quote,
+  .hljs-deletion {
+    color: hsl(var(--muted-foreground)) !important;
+    font-style: italic;
+  }
+
+  .hljs-number,
+  .hljs-regexp,
+  .hljs-literal {
+    color: hsl(262 83% 58%) !important; /* Purple for numbers */
+  }
+
+  .hljs-variable,
+  .hljs-attr {
+    color: hsl(221 83% 53%) !important; /* Blue for variables */
+  }
+
+  .hljs-function,
+  .hljs-class .hljs-title {
+    color: hsl(45 93% 47%) !important; /* Yellow for functions */
+  }
+
+  .hljs-meta,
+  .hljs-meta-keyword {
+    color: hsl(var(--muted-foreground)) !important;
+    font-weight: bold;
+  }
+
+  .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .hljs-strong {
+    font-weight: bold;
+  }
+
+  /* Enhanced chat message styles */
+  .chat-message-bot {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.8) 100%);
+    border: 1px solid hsl(var(--border) / 0.5);
+    box-shadow: 0 2px 10px hsl(var(--foreground) / 0.05);
+  }
+
+  .chat-message-user {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.9) 100%);
+    border: 1px solid hsl(var(--primary) / 0.3);
+    box-shadow: 0 2px 10px hsl(var(--primary) / 0.15);
+  }
+
+  .chat-message-hover {
+    transition: all 200ms ease-in-out;
+  }
+
+  .chat-message-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px hsl(var(--foreground) / 0.1);
+  }
+
+  /* Enhanced link styling for better visibility */
+  .markdown-link {
+    color: hsl(var(--foreground)) !important;
+    text-decoration: underline;
+    text-decoration-color: hsl(var(--foreground) / 0.6);
+    text-underline-offset: 2px;
+    transition: all 200ms ease-in-out;
+    font-weight: normal;
+  }
+
+  .markdown-link:hover {
+    color: hsl(var(--foreground) / 0.8) !important;
+    text-decoration-color: hsl(var(--foreground));
+  }
+
+  /* Better table styling in markdown */
+  .markdown-table {
+    border-collapse: collapse;
+    margin: 1rem 0;
+    background: hsl(var(--card));
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px hsl(var(--foreground) / 0.1);
+  }
+
+  /* Improved code block styling */
+  .markdown-code-block {
+    background: hsl(var(--muted) / 0.4) !important;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+
+  .markdown-inline-code {
+    background: hsl(var(--muted) / 0.6);
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.25rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
+    font-size: 0.85em;
+  }
 }
