@@ -359,7 +359,15 @@ export const getAmazonSearchCache = async (productName?: string): Promise<Amazon
 
   if (productName) {
     const cachedData = await getCachedSearchResults(productName);
-    return (cachedData?.search_results as AmazonProduct[]) || [];
+    if (!cachedData || !cachedData.search_results) return [];
+    
+    // Ensure we're working with an array of products
+    const searchResults = cachedData.search_results;
+    if (Array.isArray(searchResults)) {
+      return searchResults as AmazonProduct[];
+    }
+    
+    return [];
   }
 
   const { data: allCached } = await supabase
