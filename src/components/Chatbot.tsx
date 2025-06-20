@@ -59,8 +59,6 @@ export const Chatbot = ({
     setPlan,
     setIsShoppingListOpen,
     setIsLeftoversOpen,
-    isAmazonProductViewOpen,
-    setIsAmazonProductViewOpen,
     setThoughtSteps,
     session,
     thoughtSteps,
