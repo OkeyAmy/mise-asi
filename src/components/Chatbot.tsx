@@ -48,6 +48,9 @@ export const Chatbot = ({
 }: ChatbotProps) => {
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
 
+  const { items: shoppingListItems, removeItem, updateItem, addItems } = useShoppingList(session, "default");
+  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover, addLeftover } = useLeftovers(session);
+
   const {
     messages,
     inputValue,
@@ -62,10 +65,11 @@ export const Chatbot = ({
     setThoughtSteps,
     session,
     thoughtSteps,
+    onGetLeftovers: async () => leftoverItems || [],
+    onAddLeftover: addLeftover,
+    onUpdateLeftover: updateLeftover,
+    onRemoveLeftover: removeLeftover,
   });
-
-  const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");
-  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover } = useLeftovers(session);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
