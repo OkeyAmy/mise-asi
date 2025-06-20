@@ -368,12 +368,6 @@ export type Database = {
         Args: { search_results: Json }
         Returns: Json
       }
-      get_user_roles: {
-        Args: { p_user_id: string }
-        Returns: {
-          role: string
-        }[]
-      }
     }
     Enums: {
       [_ in never]: never
