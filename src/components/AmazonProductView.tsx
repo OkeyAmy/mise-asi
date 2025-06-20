@@ -184,22 +184,9 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Amazon Results for "{productName}" ({products.length} products)
-            </div>
-            {products.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRemoveFromCache}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4 mr-1" />
-                Remove All from Cache
-              </Button>
-            )}
+          <DialogTitle className="flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Amazon Results for "{productName}" ({products.length} products)
           </DialogTitle>
         </DialogHeader>
         
