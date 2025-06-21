@@ -48,9 +48,6 @@ export const Chatbot = ({
 }: ChatbotProps) => {
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
 
-  const { items: shoppingListItems, removeItem, updateItem, addItems } = useShoppingList(session, "default");
-  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover, addLeftover } = useLeftovers(session);
-
   const {
     messages,
     inputValue,
@@ -65,11 +62,14 @@ export const Chatbot = ({
     setThoughtSteps,
     session,
     thoughtSteps,
-    onGetLeftovers: async () => leftoverItems || [],
-    onAddLeftover: addLeftover,
-    onUpdateLeftover: updateLeftover,
-    onRemoveLeftover: removeLeftover,
+    onGetLeftovers: async () => [],
+    onAddLeftover: async () => {},
+    onUpdateLeftover: async () => {},
+    onRemoveLeftover: async () => {},
   });
+
+  const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");
+  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover } = useLeftovers(session);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,18 +98,6 @@ export const Chatbot = ({
 
   const handleUpdateLeftoverServings = (id: string, servings: number) => {
     updateLeftover(id, { servings });
-  };
-
-  const handleRemoveShoppingItem = (itemName: string) => {
-    removeItem(itemName);
-  };
-
-  const handleUpdateShoppingItem = (itemName: string, updates: Partial<ShoppingListItem>) => {
-    if (updates.quantity !== undefined && updates.unit !== undefined) {
-      updateItem(itemName, updates.quantity, updates.unit);
-    } else if (updates.quantity !== undefined) {
-      updateItem(itemName, updates.quantity);
-    }
   };
 
   return (
@@ -148,8 +136,8 @@ export const Chatbot = ({
           </DialogHeader>
           <ShoppingList
             items={shoppingListItems || []}
-            onRemove={handleRemoveShoppingItem}
-            onUpdate={handleUpdateShoppingItem}
+            onRemove={removeItem}
+            onUpdate={updateItem}
             session={session}
           />
         </DialogContent>
