@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, Smile, Frown, Send } from "lucide-react";
 
-const FeedbackWidget = () => {
-  const [open, setOpen] = useState(false);
+interface FeedbackWidgetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+const FeedbackWidget = ({ open, onOpenChange }: FeedbackWidgetProps) => {
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -44,7 +48,7 @@ const FeedbackWidget = () => {
         setFeedback("");
         setSentiment(null);
         setTimeout(() => {
-          setOpen(false);
+          onOpenChange(false);
           setSuccess(false);
         }, 2000);
       }
@@ -57,76 +61,64 @@ const FeedbackWidget = () => {
   };
 
   return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen(true)}
-        className="px-2 sm:px-4 text-xs sm:text-sm"
-      >
-        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-        <span className="hidden xs:inline sm:inline">Feedback</span>
-      </Button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-white border border-slate-200 rounded-xl p-6 text-sm max-w-md shadow-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            Send Feedback
+          </DialogTitle>
+        </DialogHeader>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-white border border-slate-200 rounded-xl p-6 text-sm max-w-md shadow-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-center">
-              Send Feedback
-            </DialogTitle>
-          </DialogHeader>
+        <div className="grid gap-4 mt-4">
+          <Textarea
+            className="bg-slate-100 text-slate-600 h-28 placeholder:text-slate-500 border border-slate-200 resize-none rounded-lg p-3"
+            placeholder="Your feedback..."
+            value={feedback}
+            onChange={(e) => {
+              setFeedback(e.target.value);
+              setSuccess(false);
+            }}
+          />
 
-          <div className="grid gap-4 mt-4">
-            <Textarea
-              className="bg-slate-100 text-slate-600 h-28 placeholder:text-slate-500 border border-slate-200 resize-none rounded-lg p-3"
-              placeholder="Your feedback..."
-              value={feedback}
-              onChange={(e) => {
-                setFeedback(e.target.value);
-                setSuccess(false);
-              }}
-            />
-
-            <div className="flex justify-between items-center mt-2">
-              <div className="flex gap-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setSentiment("positive")}
-                  className={sentiment === "positive" ? "bg-blue-50 text-blue-600 border border-blue-300" : ""}
-                  aria-pressed={sentiment === "positive"}
-                >
-                  <Smile className="h-5 w-5" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setSentiment("negative")}
-                  className={sentiment === "negative" ? "bg-blue-50 text-blue-600 border border-blue-300" : ""}
-                  aria-pressed={sentiment === "negative"}
-                >
-                  <Frown className="h-5 w-5" />
-                </Button>
-              </div>
-
+          <div className="flex justify-between items-center mt-2">
+            <div className="flex gap-2">
               <Button
-                onClick={handleSubmit}
-                disabled={loading || !feedback.trim()}
+                size="icon"
+                variant="ghost"
+                onClick={() => setSentiment("positive")}
+                className={sentiment === "positive" ? "bg-blue-50 text-blue-600 border border-blue-300" : ""}
+                aria-pressed={sentiment === "positive"}
               >
-                <Send className="w-4 h-4 mr-2" />
-                {loading ? "Sending..." : "Send"}
+                <Smile className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setSentiment("negative")}
+                className={sentiment === "negative" ? "bg-blue-50 text-blue-600 border border-blue-300" : ""}
+                aria-pressed={sentiment === "negative"}
+              >
+                <Frown className="h-5 w-5" />
               </Button>
             </div>
 
-            {success && (
-              <div className="text-green-600 text-center mt-2">
-                🎉 Feedback received! Thank you.
-              </div>
-            )}
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || !feedback.trim()}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {loading ? "Sending..." : "Send"}
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+
+          {success && (
+            <div className="text-green-600 text-center mt-2">
+              🎉 Feedback received! Thank you.
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { LeftoverItem } from "@/data/schema";
 import { FunctionHandlerArgs, sanitizeDataForDisplay } from "./handlerUtils";
@@ -99,15 +98,38 @@ export const handleLeftoversCrudFunctions = async (
       };
       console.log("🔄 Replacing entire leftover item:", { leftover_id, leftover_data });
       
-      if (onUpdateLeftoverItemPartial) {
+      if (onUpdateLeftoverItemPartial && onGetLeftovers) {
+        // Check if leftover_id is actually a meal name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(leftover_id);
+        
+        let actualId = leftover_id;
+        
+        if (!isUUID) {
+          // leftover_id is actually a meal name, need to look up the real ID
+          console.log("🔍 Looking up leftover by meal name:", leftover_id);
+          const leftovers = await onGetLeftovers();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
+          const mealNameNormalized = normalize(leftover_id);
+          const foundLeftover = leftovers.find(item => normalize(item.meal_name) === mealNameNormalized);
+          
+          if (foundLeftover) {
+            actualId = foundLeftover.id;
+            console.log("✅ Found leftover ID:", actualId);
+          } else {
+            console.log("❌ No leftover found with meal name:", leftover_id);
+            funcResultMsg = `I couldn't find a leftover item named '${leftover_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
         // For PUT, we replace all fields of the leftover
-        await onUpdateLeftoverItemPartial(leftover_id, leftover_data);
-        funcResultMsg = `I've completely replaced the leftover item with ID ${leftover_id}. The changes are now visible in your leftovers.`;
+        await onUpdateLeftoverItemPartial(actualId, leftover_data);
+        funcResultMsg = `I've completely replaced the leftover item. The changes are now visible in your leftovers.`;
         console.log("✅ Successfully replaced leftover item");
       } else if (onUpdateLeftover) {
         // Fallback to legacy handler
         await onUpdateLeftover(leftover_id, leftover_data);
-        funcResultMsg = `I've completely replaced the leftover item with ID ${leftover_id}. The changes are now visible in your leftovers.`;
+        funcResultMsg = `I've completely replaced the leftover item. The changes are now visible in your leftovers.`;
         console.log("✅ Successfully replaced leftover item via fallback");
       } else {
         console.log("❌ No leftover update callbacks available");
@@ -129,10 +151,33 @@ export const handleLeftoversCrudFunctions = async (
       };
       console.log("📝 Updating leftover item:", { leftover_id, updates });
       
-      if (onUpdateLeftoverItemPartial) {
-        await onUpdateLeftoverItemPartial(leftover_id, updates);
+      if (onUpdateLeftoverItemPartial && onGetLeftovers) {
+        // Check if leftover_id is actually a meal name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(leftover_id);
+        
+        let actualId = leftover_id;
+        
+        if (!isUUID) {
+          // leftover_id is actually a meal name, need to look up the real ID
+          console.log("🔍 Looking up leftover by meal name:", leftover_id);
+          const leftovers = await onGetLeftovers();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
+          const mealNameNormalized = normalize(leftover_id);
+          const foundLeftover = leftovers.find(item => normalize(item.meal_name) === mealNameNormalized);
+          
+          if (foundLeftover) {
+            actualId = foundLeftover.id;
+            console.log("✅ Found leftover ID:", actualId);
+          } else {
+            console.log("❌ No leftover found with meal name:", leftover_id);
+            funcResultMsg = `I couldn't find a leftover item named '${leftover_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
+        await onUpdateLeftoverItemPartial(actualId, updates);
         const updatedFields = Object.keys(updates).join(', ');
-        funcResultMsg = `I've updated the following fields for leftover ${leftover_id}: ${updatedFields}. You can see the changes in your leftovers now.`;
+        funcResultMsg = `I've updated the following fields for your leftover: ${updatedFields}. You can see the changes in your leftovers now.`;
         console.log("✅ Successfully updated leftover item");
       } else if (onUpdateLeftover) {
         // Fallback to legacy handler
@@ -157,14 +202,37 @@ export const handleLeftoversCrudFunctions = async (
       const { leftover_id } = functionCall.args as { leftover_id: string };
       console.log("🗑️ Deleting leftover item:", leftover_id);
       
-      if (onDeleteLeftoverItem) {
-        await onDeleteLeftoverItem(leftover_id);
-        funcResultMsg = `I've deleted the leftover item with ID ${leftover_id}. It has been removed from your leftovers.`;
+      if (onDeleteLeftoverItem && onGetLeftovers) {
+        // Check if leftover_id is actually a meal name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(leftover_id);
+        
+        let actualId = leftover_id;
+        
+        if (!isUUID) {
+          // leftover_id is actually a meal name, need to look up the real ID
+          console.log("🔍 Looking up leftover by meal name:", leftover_id);
+          const leftovers = await onGetLeftovers();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/es$|s$/, '');
+          const mealNameNormalized = normalize(leftover_id);
+          const foundLeftover = leftovers.find(item => normalize(item.meal_name) === mealNameNormalized);
+          
+          if (foundLeftover) {
+            actualId = foundLeftover.id;
+            console.log("✅ Found leftover ID:", actualId);
+          } else {
+            console.log("❌ No leftover found with meal name:", leftover_id);
+            funcResultMsg = `I couldn't find a leftover item named '${leftover_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
+        await onDeleteLeftoverItem(actualId);
+        funcResultMsg = `I've deleted the leftover item. It has been removed from your leftovers.`;
         console.log("✅ Successfully deleted leftover item");
       } else if (onRemoveLeftover) {
         // Fallback to legacy handler
         await onRemoveLeftover(leftover_id);
-        funcResultMsg = `I've deleted the leftover item with ID ${leftover_id}. It has been removed from your leftovers.`;
+        funcResultMsg = `I've deleted the leftover item. It has been removed from your leftovers.`;
         console.log("✅ Successfully deleted leftover item via fallback");
       } else {
         console.log("❌ No leftover delete callbacks available");

@@ -4,11 +4,12 @@ import { ChatInput } from "./ChatInput";
 import { ChatHeader } from "./ChatHeader";
 import { ShoppingList } from "./ShoppingList";
 import { LeftoversDialog } from "./LeftoversDialog";
-import { MealPlan } from "./MealPlan";
 import { useChat } from "@/hooks/useChat";
 import { useShoppingList } from "@/hooks/useShoppingList";
 import { useLeftovers } from "@/hooks/useLeftovers";
-import { MealPlan as MealPlanType, ThoughtStep } from "@/data/schema";
+import { useInventory, InventoryItem } from "@/hooks/useInventory";
+import { usePreferences } from "@/hooks/usePreferences";
+import { ThoughtStep, LeftoverItem, UserPreferences } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
 import { AmazonProductView } from "./AmazonProductView";
 import {
@@ -19,8 +20,6 @@ import {
 } from "./ui/dialog";
 
 interface ChatbotProps {
-  plan: MealPlanType;
-  setPlan: (plan: MealPlanType) => void;
   isShoppingListOpen: boolean;
   setIsShoppingListOpen: (open: boolean) => void;
   isLeftoversOpen: boolean;
@@ -33,8 +32,6 @@ interface ChatbotProps {
 }
 
 export const Chatbot = ({
-  plan,
-  setPlan,
   isShoppingListOpen,
   setIsShoppingListOpen,
   isLeftoversOpen,
@@ -48,6 +45,77 @@ export const Chatbot = ({
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
 
   const {
+    items: shoppingListItems,
+    addItems: addShoppingListItems,
+    removeItems: removeShoppingListItems,
+    updateItem: updateShoppingListItem,
+    removeItem: removeShoppingListItem,
+    saveList: replaceShoppingList,
+  } = useShoppingList(session, "default");
+
+  const {
+    items: leftoverItems,
+    isLoading: leftoverLoading,
+    addLeftover,
+    updateLeftover,
+    removeLeftover,
+  } = useLeftovers(session);
+
+  const {
+    items: inventoryItems,
+    addItem: createInventoryItem,
+    updateItem: updateInventoryItemFromHook,
+    deleteItem: deleteInventoryItemFromHook,
+    upsertItem,
+  } = useInventory(session);
+  
+  const { preferences, updatePreferences } = usePreferences(session);
+
+  const onCreateInventoryItems = async (items: Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
+    for (const item of items) {
+      await createInventoryItem(item);
+    }
+  };
+
+  const onUpdateInventory = async (items: Partial<Omit<InventoryItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>> & { item_name: string }[]) => {
+    for (const item of items) {
+      await upsertItem(item);
+    }
+  };
+  
+  const onUpdateInventoryItem = async (itemId: string, updates: Partial<InventoryItem>) => {
+    await updateInventoryItemFromHook(itemId, updates);
+  };
+  
+  const onDeleteInventoryItem = async (itemId: string) => {
+    await deleteInventoryItemFromHook(itemId);
+  };
+
+  // Add missing Leftovers CRUD functions
+  const onCreateLeftoverItems = async (items: Omit<LeftoverItem, 'id' | 'user_id' | 'created_at' | 'updated_at'>[]) => {
+    for (const item of items) {
+      await addLeftover(item);
+    }
+  };
+
+  const onUpdateLeftoverItemPartial = async (leftoverId: string, updates: Partial<{ meal_name: string; servings: number; notes: string }>) => {
+    await updateLeftover(leftoverId, updates);
+  };
+
+  const onDeleteLeftoverItem = async (leftoverId: string) => {
+    await removeLeftover(leftoverId);
+  };
+
+
+
+
+
+  // Wrapper function to match CRUD interface for shopping list updates
+  const onUpdateShoppingListItemCrud = async (itemName: string, updates: { quantity?: number; unit?: string }) => {
+    await updateShoppingListItem(itemName, updates.quantity, updates.unit);
+  };
+
+  const {
     messages,
     inputValue,
     setInputValue,
@@ -55,21 +123,38 @@ export const Chatbot = ({
     handleSendMessage,
     resetConversation,
   } = useChat({
-    setPlan,
+    setPlan: () => {}, // No-op since we removed meal plan
     setIsShoppingListOpen,
     setIsLeftoversOpen,
     setThoughtSteps,
     session,
     thoughtSteps,
-    onGetLeftovers: async () => [],
-    onAddLeftover: async () => {},
-    onUpdateLeftover: async () => {},
-    onRemoveLeftover: async () => {},
+    shoppingListItems,
+    onAddItemsToShoppingList: addShoppingListItems,
+    onRemoveItemsFromShoppingList: removeShoppingListItems,
+    onGetLeftovers: async () => leftoverItems,
+    onAddLeftover: addLeftover,
+    onUpdateLeftover: updateLeftover,
+    onRemoveLeftover: removeLeftover,
+    onGetInventory: async () => inventoryItems,
+    onCreateInventoryItems,
+    onUpdateInventory,
+    onUpdateInventoryItem,
+    onDeleteInventoryItem,
+    onGetUserPreferences: async () => preferences,
+    onUpdateUserPreferences: updatePreferences,
+    // CRUD Shopping List functions
+    onGetShoppingListItems: async () => shoppingListItems,
+    onCreateShoppingListItems: addShoppingListItems,
+    onUpdateShoppingListItem: onUpdateShoppingListItemCrud,
+    onDeleteShoppingListItems: removeShoppingListItems,
+    onReplaceShoppingList: replaceShoppingList,
+    // CRUD Leftovers functions
+    onCreateLeftoverItems,
+    onUpdateLeftoverItemPartial,
+    onDeleteLeftoverItem,
   });
-
-  const { items: shoppingListItems, removeItem, updateItem } = useShoppingList(session, "default");
-  const { items: leftoverItems, isLoading: leftoverLoading, removeLeftover, updateLeftover } = useLeftovers(session);
-
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -123,10 +208,6 @@ export const Chatbot = ({
             />
           </div>
         </div>
-
-        <div className="hidden lg:block w-80 border-l border-border flex-shrink-0">
-          <MealPlan plan={plan} />
-        </div>
       </div>
 
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
@@ -136,8 +217,8 @@ export const Chatbot = ({
           </DialogHeader>
           <ShoppingList
             items={shoppingListItems || []}
-            onRemove={removeItem}
-            onUpdate={updateItem}
+            onRemove={removeShoppingListItem}
+            onUpdate={updateShoppingListItem}
             session={session}
           />
         </DialogContent>

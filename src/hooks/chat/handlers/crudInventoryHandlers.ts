@@ -1,4 +1,3 @@
-
 import { FunctionCall } from "@google/generative-ai";
 import { FunctionHandlerArgs } from "./handlerUtils";
 
@@ -86,10 +85,33 @@ export const handleInventoryCrudFunctions = async (
       };
       console.log("🔄 Replacing entire inventory item:", { item_id, item_data });
       
-      if (onUpdateInventoryItem) {
+      if (onUpdateInventoryItem && onGetInventory) {
+        // Check if item_id is actually an item name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(item_id);
+        
+        let actualId = item_id;
+        
+        if (!isUUID) {
+          // item_id is actually an item name, need to look up the real ID
+          console.log("🔍 Looking up inventory item by name:", item_id);
+          const inventoryItems = await onGetInventory();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/\s+/g, ' ');
+          const itemNameNormalized = normalize(item_id);
+          const foundItem = inventoryItems.find(item => normalize(item.item_name) === itemNameNormalized);
+          
+          if (foundItem) {
+            actualId = foundItem.id;
+            console.log("✅ Found inventory item ID:", actualId);
+          } else {
+            console.log("❌ No inventory item found with name:", item_id);
+            funcResultMsg = `I couldn't find an inventory item named '${item_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
         // For PUT, we replace the entire item with new data
-        await onUpdateInventoryItem(item_id, item_data);
-        funcResultMsg = `I've completely replaced the inventory item with ID ${item_id}. The changes are now visible in your inventory.`;
+        await onUpdateInventoryItem(actualId, item_data);
+        funcResultMsg = `I've completely replaced your ${item_data.item_name} inventory item. The changes are now visible in your inventory.`;
         console.log("✅ Successfully replaced inventory item");
       } else {
         console.log("❌ onUpdateInventoryItem callback not available");
@@ -111,12 +133,37 @@ export const handleInventoryCrudFunctions = async (
       };
       console.log("📝 Updating inventory item:", { item_id, updates });
       
-      if (onUpdateInventoryItem) {
+      if (onUpdateInventoryItem && onGetInventory) {
+        // Check if item_id is actually an item name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(item_id);
+        
+        let actualId = item_id;
+        let itemName = item_id;
+        
+        if (!isUUID) {
+          // item_id is actually an item name, need to look up the real ID
+          console.log("🔍 Looking up inventory item by name:", item_id);
+          const inventoryItems = await onGetInventory();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/\s+/g, ' ');
+          const itemNameNormalized = normalize(item_id);
+          const foundItem = inventoryItems.find(item => normalize(item.item_name) === itemNameNormalized);
+          
+          if (foundItem) {
+            actualId = foundItem.id;
+            itemName = foundItem.item_name;
+            console.log("✅ Found inventory item ID:", actualId);
+          } else {
+            console.log("❌ No inventory item found with name:", item_id);
+            funcResultMsg = `I couldn't find an inventory item named '${item_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
         // For PATCH, we only update the specified fields
-        await onUpdateInventoryItem(item_id, updates);
+        await onUpdateInventoryItem(actualId, updates);
         
         const updatedFields = Object.keys(updates).join(', ');
-        funcResultMsg = `I've updated the following fields for inventory item ${item_id}: ${updatedFields}. You can see the changes in your inventory now.`;
+        funcResultMsg = `I've updated the following fields for ${itemName}: ${updatedFields}. You can see the changes in your inventory now.`;
         console.log("✅ Successfully updated inventory item");
       } else {
         console.log("❌ onUpdateInventoryItem callback not available");
@@ -135,9 +182,34 @@ export const handleInventoryCrudFunctions = async (
       const { item_id } = functionCall.args as { item_id: string };
       console.log("🗑️ Deleting inventory item:", item_id);
       
-      if (onDeleteInventoryItem) {
-        await onDeleteInventoryItem(item_id);
-        funcResultMsg = `I've deleted the inventory item with ID ${item_id}. It has been removed from your inventory.`;
+      if (onDeleteInventoryItem && onGetInventory) {
+        // Check if item_id is actually an item name (not a UUID format)
+        const isUUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(item_id);
+        
+        let actualId = item_id;
+        let itemName = item_id;
+        
+        if (!isUUID) {
+          // item_id is actually an item name, need to look up the real ID
+          console.log("🔍 Looking up inventory item by name:", item_id);
+          const inventoryItems = await onGetInventory();
+          const normalize = (name: string) => name.toLowerCase().trim().replace(/\s+/g, ' ');
+          const itemNameNormalized = normalize(item_id);
+          const foundItem = inventoryItems.find(item => normalize(item.item_name) === itemNameNormalized);
+          
+          if (foundItem) {
+            actualId = foundItem.id;
+            itemName = foundItem.item_name;
+            console.log("✅ Found inventory item ID:", actualId);
+          } else {
+            console.log("❌ No inventory item found with name:", item_id);
+            funcResultMsg = `I couldn't find an inventory item named '${item_id}'.`;
+            return funcResultMsg;
+          }
+        }
+        
+        await onDeleteInventoryItem(actualId);
+        funcResultMsg = `I've deleted ${itemName} from your inventory. It has been completely removed.`;
         console.log("✅ Successfully deleted inventory item");
       } else {
         console.log("❌ onDeleteInventoryItem callback not available");

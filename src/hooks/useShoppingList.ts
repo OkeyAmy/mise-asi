@@ -44,6 +44,10 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     setIsLoading(false);
   }, [session, mealPlanId]);
 
+  useEffect(() => {
+    fetchList();
+  }, [fetchList]);
+
   // Remove multiple items from the shopping list
   const removeItems = async (itemNames: string[]) => {
     console.log("🛒 removeItems called with:", itemNames);
@@ -284,10 +288,6 @@ export function useShoppingList(session: Session | null, mealPlanId: string) {
     // `saveList` will handle both updating the DB and setting the local state.
     await saveList(newItems);
   };
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
 
   return { items, isLoading, removeItem, removeItems, saveList, addItems, fetchList, setItems, updateItem };
 }

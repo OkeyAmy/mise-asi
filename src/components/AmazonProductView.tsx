@@ -222,10 +222,10 @@ export const AmazonProductView = ({ isOpen, onClose, productName }: AmazonProduc
                   variant="outline"
                   size="sm"
                   onClick={handleClearCacheClick}
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-600 hover:text-red-700 p-2"
+                  aria-label="Clear Cache"
                 >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Clear Cache
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               )}
             </DialogTitle>

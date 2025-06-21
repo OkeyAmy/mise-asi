@@ -106,7 +106,7 @@ export const useLeftovers = (session: Session | null) => {
         }
     };
 
-    const updateLeftover = async (id: string, updates: Partial<{ servings: number; notes: string }>) => {
+    const updateLeftover = async (id: string, updates: Partial<{ meal_name: string; servings: number; notes: string }>) => {
         if (!session) return;
         try {
             const { data, error } = await supabase

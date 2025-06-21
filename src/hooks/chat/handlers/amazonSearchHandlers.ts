@@ -283,7 +283,7 @@ export const handleAmazonSearchFunctions = async (
 - Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
 - Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
 - Availability: ${product.product_availability || 'Check on Amazon'}
-- Link: ${product.product_url || 'Link not available'}
+- Link: ${product.product_url ? `[View on Amazon](${product.product_url})` : 'Link not available'}
 - ASIN: ${product.asin}`;
         }).join('\n\n');
         
@@ -367,7 +367,7 @@ export const handleAmazonSearchFunctions = async (
 - Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
 - Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
 - Availability: ${product.product_availability || 'Check on Amazon'}
-- Link: ${product.product_url || 'Link not available'}
+- Link: ${product.product_url ? `[View on Amazon](${product.product_url})` : 'Link not available'}
 - ASIN: ${product.asin}`;
         }).join('\n\n');
         
@@ -419,7 +419,7 @@ export const handleAmazonSearchFunctions = async (
 - Best Seller: ${product.is_best_seller ? 'Yes' : 'No'}
 - Amazon's Choice: ${product.is_amazon_choice ? 'Yes' : 'No'}
 - Availability: ${product.product_availability || 'Check on Amazon'}
-- Link: ${product.product_url || 'Link not available'}
+- Link: ${product.product_url ? `[View on Amazon](${product.product_url})` : 'Link not available'}
 - ASIN: ${product.asin}`;
         }).join('\n\n');
         

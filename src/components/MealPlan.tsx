@@ -1,4 +1,3 @@
-
 import { MealPlan as MealPlanType } from "@/data/schema";
 import { MealCard } from "./MealCard";
 import { Button } from "./ui/button";
@@ -10,7 +9,7 @@ interface MealPlanProps {
 
 export const MealPlan = ({ plan }: MealPlanProps) => {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 flex-1">
+    <div className="p-4 sm:p-6 lg:p-8 flex-1 lg:hidden">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Your Weekly Meal Plan</h1>
         <div className="flex gap-2">

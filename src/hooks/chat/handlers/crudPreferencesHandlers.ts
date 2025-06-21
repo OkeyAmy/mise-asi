@@ -45,15 +45,41 @@ Key Info: ${JSON.stringify(sanitizedData.key_info)}`;
   // POST - Create new user preferences (typically used for initialization)
   else if (functionCall.name === "createUserPreferences") {
     try {
-      const preferencesData = functionCall.args as Partial<UserPreferences>;
+      const rawPreferencesData = functionCall.args as any;
+      console.log("🔧 Raw preference creation data:", rawPreferencesData);
+      
       if (onUpdateUserPreferences) {
-        await onUpdateUserPreferences(preferencesData);
+        // Ensure JSONB fields are properly structured
+        const processedData: Partial<UserPreferences> = { ...rawPreferencesData };
+        
+        // Initialize swap_preferences if provided but not fully structured
+        if (processedData.swap_preferences) {
+          processedData.swap_preferences = {
+            swap_frequency: "medium",
+            preferred_cuisines: [],
+            disliked_ingredients: [],
+            ...processedData.swap_preferences
+          };
+        }
+        
+        // Initialize meal_ratings as empty object if not provided
+        if (!processedData.meal_ratings) {
+          processedData.meal_ratings = {};
+        }
+        
+        // Initialize key_info as empty object if not provided
+        if (!processedData.key_info) {
+          processedData.key_info = {};
+        }
+        
+        console.log("🔧 Processed preference creation data:", processedData);
+        await onUpdateUserPreferences(processedData);
         funcResultMsg = "I've created your user preferences profile.";
       } else {
         funcResultMsg = "Preferences function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error creating preferences:", e);
       funcResultMsg = "I had trouble creating your preferences.";
     }
     addThoughtStep("✅ Created user preferences");
@@ -62,16 +88,41 @@ Key Info: ${JSON.stringify(sanitizedData.key_info)}`;
   // PUT - Replace entire preferences profile
   else if (functionCall.name === "replaceUserPreferences") {
     try {
-      const preferencesData = functionCall.args as Partial<UserPreferences>;
+      const rawPreferencesData = functionCall.args as any;
+      console.log("🔧 Raw preference replacement data:", rawPreferencesData);
+      
       if (onUpdateUserPreferences) {
-        // For PUT, we replace all user preferences with new data
-        await onUpdateUserPreferences(preferencesData);
+        // For PUT, we replace all user preferences with new data, but ensure JSONB structure
+        const processedData: Partial<UserPreferences> = { ...rawPreferencesData };
+        
+        // Ensure swap_preferences is properly structured
+        if (processedData.swap_preferences) {
+          processedData.swap_preferences = {
+            swap_frequency: "medium",
+            preferred_cuisines: [],
+            disliked_ingredients: [],
+            ...processedData.swap_preferences
+          };
+        }
+        
+        // Ensure meal_ratings is an object
+        if (!processedData.meal_ratings) {
+          processedData.meal_ratings = {};
+        }
+        
+        // Ensure key_info is an object
+        if (!processedData.key_info) {
+          processedData.key_info = {};
+        }
+        
+        console.log("🔧 Processed preference replacement data:", processedData);
+        await onUpdateUserPreferences(processedData);
         funcResultMsg = "I've completely replaced your preferences profile.";
       } else {
         funcResultMsg = "Preferences function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error replacing preferences:", e);
       funcResultMsg = "I had trouble replacing your preferences.";
     }
     addThoughtStep("✅ Replaced user preferences");
@@ -80,16 +131,68 @@ Key Info: ${JSON.stringify(sanitizedData.key_info)}`;
   // PATCH - Partially update user preferences
   else if (functionCall.name === "updateUserPreferencesPartial") {
     try {
-      const updates = functionCall.args as Partial<UserPreferences>;
-      if (onUpdateUserPreferences) {
-        await onUpdateUserPreferences(updates);
-        const updatedFields = Object.keys(updates).join(', ');
+      const rawUpdates = functionCall.args as any;
+      console.log("🔧 Raw preference updates received:", rawUpdates);
+      
+      if (onUpdateUserPreferences && onGetUserPreferences) {
+        // First, get current preferences to merge with updates properly
+        const currentPreferences = await onGetUserPreferences();
+        
+        // Process the updates to handle nested JSONB objects properly
+        const processedUpdates: Partial<UserPreferences> = {};
+        
+        // Handle direct field updates
+        const directFields = ['restrictions', 'goals', 'habits', 'inventory', 'cultural_heritage', 'family_size', 'notes'];
+        directFields.forEach(field => {
+          if (rawUpdates[field] !== undefined) {
+            (processedUpdates as any)[field] = rawUpdates[field];
+          }
+        });
+        
+        // Handle swap_preferences JSONB object
+        if (rawUpdates.swap_preferences !== undefined) {
+          console.log("🔧 Processing swap_preferences update:", rawUpdates.swap_preferences);
+          // Merge with existing swap_preferences if any
+          const currentSwapPrefs = currentPreferences?.swap_preferences || {
+            swap_frequency: "medium",
+            preferred_cuisines: [],
+            disliked_ingredients: []
+          };
+          
+          processedUpdates.swap_preferences = {
+            ...currentSwapPrefs,
+            ...rawUpdates.swap_preferences
+          };
+        }
+        
+        // Handle meal_ratings JSONB object
+        if (rawUpdates.meal_ratings !== undefined) {
+          const currentMealRatings = currentPreferences?.meal_ratings || {};
+          processedUpdates.meal_ratings = {
+            ...currentMealRatings,
+            ...rawUpdates.meal_ratings
+          };
+        }
+        
+        // Handle key_info JSONB object
+        if (rawUpdates.key_info !== undefined) {
+          const currentKeyInfo = currentPreferences?.key_info || {};
+          processedUpdates.key_info = {
+            ...currentKeyInfo,
+            ...rawUpdates.key_info
+          };
+        }
+        
+        console.log("🔧 Processed preference updates:", processedUpdates);
+        
+        await onUpdateUserPreferences(processedUpdates);
+        const updatedFields = Object.keys(processedUpdates).join(', ');
         funcResultMsg = `I've updated the following preference fields: ${updatedFields}.`;
       } else {
         funcResultMsg = "Preferences function is not available right now.";
       }
     } catch (e) {
-      console.error(e);
+      console.error("❌ Error updating preferences:", e);
       funcResultMsg = "I had trouble updating your preferences.";
     }
     addThoughtStep("✅ Updated user preferences");

@@ -1,4 +1,4 @@
-
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { RotateCcw } from "lucide-react";
 import {
@@ -24,16 +24,32 @@ export const ResetConversationButton = ({
   iconOnly = false,
   className = "",
 }: ResetConversationButtonProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleReset = () => {
+    setIsOpen(false);
+    onReset();
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+  };
+
   return (
-    <AlertDialog>
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
           className={`${className} ${iconOnly ? 'p-0 rounded-full aspect-square' : 'w-full justify-start'}`}
           aria-label="Reset chat"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsOpen(true);
+          }}
         >
           <RotateCcw className="h-4 w-4" />
-          {!iconOnly && <span className="ml-2">Reset Chat</span>}
+          {!iconOnly && <span className="ml-2 font-normal">Reset Chat</span>}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -44,8 +60,8 @@ export const ResetConversationButton = ({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onReset}>Reset Chat</AlertDialogAction>
+          <AlertDialogCancel onClick={() => setIsOpen(false)}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleReset}>Reset Chat</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
