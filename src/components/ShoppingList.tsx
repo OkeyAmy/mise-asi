@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
@@ -117,11 +116,8 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
       return;
     }
 
-    // Always create shareable link for authenticated users
-    if (session?.user) {
-      await createAndShowShareLink();
-    } else if (navigator.share) {
-      // Only use native sharing for non-authenticated users
+    if (navigator.share && !shareDialogOpen) {
+      // Use native sharing if available
       try {
         const listContent = formatShoppingList();
         await navigator.share({
@@ -130,20 +126,12 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
         });
       } catch (error) {
         console.error('Error sharing:', error);
-        // Show error toast
-        toast({
-          title: "Error",
-          description: "Failed to share. Please try again.",
-          variant: "destructive"
-        });
+        // Fall back to shareable link
+        await createAndShowShareLink();
       }
     } else {
-      // Fallback for non-authenticated users without native share
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to create shareable links.",
-        variant: "destructive"
-      });
+      // Create shareable link
+      await createAndShowShareLink();
     }
   };
 
@@ -179,7 +167,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
     }
   };
 
-  const canShare = session?.user || (typeof navigator !== 'undefined' && !!navigator.share);
+  const canShare = typeof navigator !== 'undefined' && (!!navigator.share || session?.user);
 
   return (
     <>
