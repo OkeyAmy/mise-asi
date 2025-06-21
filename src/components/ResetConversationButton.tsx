@@ -28,13 +28,12 @@ export const ResetConversationButton = ({
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button
-          variant="outline"
-          size="icon"
-          className={className + " p-0 rounded-full aspect-square"}
+          variant="ghost"
+          className={`${className} ${iconOnly ? 'p-0 rounded-full aspect-square' : 'w-full justify-start'}`}
           aria-label="Reset chat"
         >
-          <RotateCcw className="h-5 w-5" />
-          {!iconOnly && <span className="ml-1">Reset Chat</span>}
+          <RotateCcw className="h-4 w-4" />
+          {!iconOnly && <span className="ml-2">Reset Chat</span>}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

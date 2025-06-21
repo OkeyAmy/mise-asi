@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
@@ -114,12 +113,13 @@ export const Chatbot = ({
             <div ref={messagesEndRef} />
           </div>
           
-          <div className="flex-shrink-0 p-4 border-t border-border">
+          <div className="flex-shrink-0 border-t border-border">
             <ChatInput
               inputValue={inputValue}
               setInputValue={setInputValue}
               handleSendMessage={handleSendMessage}
               isThinking={isThinking}
+              onResetConversation={resetConversation}
             />
           </div>
         </div>
