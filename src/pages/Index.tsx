@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { Header } from "@/components/Header";
+import { LandingPage } from "@/components/LandingPage";
 import { initialMealPlan } from '@/data/mock';
 import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +17,7 @@ const Index = () => {
   const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [pendingAIMessage, setPendingAIMessage] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -61,32 +64,55 @@ const Index = () => {
   }, [isRightPanelOpen]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
-      } else {
-        navigate('/auth');
+      } catch (error) {
+        console.error('Auth check error:', error);
+      } finally {
+        setIsAuthChecking(false);
       }
-    });
+    };
+
+    checkAuth();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        navigate('/auth');
-      }
+      setIsAuthChecking(false);
     });
+
     return () => subscription.unsubscribe();
-  }, [navigate]);
-  
-  if (!session) {
-    return null;
-  }
+  }, []);
+
+  const handleGetStarted = () => {
+    navigate('/auth');
+  };
 
   const toggleSidebar = () => {
     setIsRightPanelOpen(prev => !prev);
   };
 
+  // Show loading state while checking auth
+  if (isAuthChecking) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show landing page if not authenticated
+  if (!session) {
+    return <LandingPage onGetStarted={handleGetStarted} />;
+  }
+
+  // Show authenticated app
   return (
     <div className="h-screen-safe bg-background text-foreground flex flex-col relative">
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
