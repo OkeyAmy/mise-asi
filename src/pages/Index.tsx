@@ -4,15 +4,13 @@ import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { Header } from "@/components/Header";
 import { LandingPage } from "@/components/LandingPage";
-import { initialMealPlan } from '@/data/mock';
-import { MealPlan as MealPlanType, ThoughtStep } from '@/data/schema';
+import { ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Index = () => {
-  const [mealPlan, setMealPlan] = useState<MealPlanType>(initialMealPlan);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [isLeftoversOpen, setIsLeftoversOpen] = useState(false);
   const [thoughtSteps, setThoughtSteps] = useState<ThoughtStep[]>([]);
@@ -121,8 +119,6 @@ const Index = () => {
       <div className="flex-1 pt-20 relative min-h-0">
         <div className="w-full h-full chat-interface">
           <Chatbot
-            plan={mealPlan}
-            setPlan={setMealPlan}
             isShoppingListOpen={isShoppingListOpen}
             setIsShoppingListOpen={setIsShoppingListOpen}
             isLeftoversOpen={isLeftoversOpen}
