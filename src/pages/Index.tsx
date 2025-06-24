@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
@@ -138,12 +137,12 @@ const Index = () => {
           aria-expanded={isRightPanelOpen}
           aria-controls="thought-process-sidebar"
           onClick={toggleSidebar}
-          className="hidden lg:flex fixed top-24 right-4 z-toggle bg-primary text-primary-foreground border border-border rounded-full shadow-lg toggle-button w-12 h-12 items-center justify-center focus-ring"
+          className="hidden lg:flex fixed top-24 right-4 z-toggle bg-white text-gray-700 border border-gray-200 rounded-full shadow-md hover:shadow-lg w-10 h-10 items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
           >
             {isRightPanelOpen ? (
-            <ChevronRight className="w-5 h-5 transition-transform duration-200" />
+            <ChevronRight className="w-4 h-4 transition-transform duration-200" />
             ) : (
-            <ChevronLeft className="w-5 h-5 transition-transform duration-200" />
+            <ChevronLeft className="w-4 h-4 transition-transform duration-200" />
             )}
           </button>
 
@@ -196,12 +195,12 @@ const Index = () => {
           aria-expanded={isRightPanelOpen}
           aria-controls="mobile-thought-process-sidebar"
           onClick={toggleSidebar}
-          className="lg:hidden fixed top-24 right-4 z-toggle bg-primary text-primary-foreground border border-border rounded-full shadow-lg toggle-button w-12 h-12 flex items-center justify-center focus-ring"
+          className="lg:hidden fixed top-24 right-4 z-toggle bg-white text-gray-700 border border-gray-200 rounded-full shadow-md hover:shadow-lg w-10 h-10 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
         >
           {isRightPanelOpen ? (
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           ) : (
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
           )}
         </button>
 
