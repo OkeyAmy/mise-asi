@@ -13,10 +13,17 @@ export async function callGroqWithStreaming(
   try {
     console.log("Falling back to Groq with OpenAI SDK, model: deepseek-r1-distill-llama-70b");
 
-    const groqApiKey = Deno.env.get("GROQ_API_KEY");
+    // Note: In browser context, we'll get the API key from the edge function
+    // This function will primarily be called from edge functions where Deno.env is available
+    let groqApiKey: string | undefined;
+    
+    // Check if we're in a Deno environment (edge function)
+    if (typeof window === 'undefined' && typeof globalThis.Deno !== 'undefined') {
+      groqApiKey = globalThis.Dene?.env?.get("GROQ_API_KEY");
+    }
 
     if (!groqApiKey) {
-      throw new Error("Groq API key not found in Supabase secrets. Please set GROQ_API_KEY.");
+      throw new Error("Groq API key not found. Please set GROQ_API_KEY in Supabase secrets.");
     }
 
     const openai = new OpenAI({
@@ -46,13 +53,13 @@ export async function callGroqWithStreaming(
       content: getSystemPrompt(),
     });
 
-    // Convert Gemini tools to OpenAI format
+    // Convert Gemini tools to OpenAI format with proper typing
     const openAITools = tools[0].functionDeclarations.map(func => ({
       type: "function" as const,
       function: {
         name: func.name,
         description: func.description,
-        parameters: func.parameters,
+        parameters: func.parameters as Record<string, any>,
       }
     }));
 
@@ -66,7 +73,6 @@ export async function callGroqWithStreaming(
       tools: openAITools,
     });
 
-    let accumulatedText = "";
     let functionCalls: any[] = [];
 
     for await (const chunk of chatCompletion) {
@@ -92,7 +98,6 @@ export async function callGroqWithStreaming(
       // Handle regular text content
       const content = choice.delta?.content || "";
       if (content) {
-        accumulatedText += content;
         handlers.onText(content);
       }
     }
@@ -109,10 +114,16 @@ export async function callGroq(contents: Content[]): Promise<any> {
   try {
     console.log("Calling Groq non-streaming fallback");
 
-    const groqApiKey = Deno.env.get("GROQ_API_KEY");
+    // Note: In browser context, we'll get the API key from the edge function
+    let groqApiKey: string | undefined;
+    
+    // Check if we're in a Deno environment (edge function)
+    if (typeof window === 'undefined' && typeof globalThis.Deno !== 'undefined') {
+      groqApiKey = globalThis.Deno?.env?.get("GROQ_API_KEY");
+    }
 
     if (!groqApiKey) {
-      throw new Error("Groq API key not found in Supabase secrets. Please set GROQ_API_KEY.");
+      throw new Error("Groq API key not found. Please set GROQ_API_KEY in Supabase secrets.");
     }
 
     const openai = new OpenAI({
@@ -141,13 +152,13 @@ export async function callGroq(contents: Content[]): Promise<any> {
       content: getSystemPrompt(),
     });
 
-    // Convert tools to OpenAI format
+    // Convert tools to OpenAI format with proper typing
     const openAITools = tools[0].functionDeclarations.map(func => ({
       type: "function" as const,
       function: {
         name: func.name,
         description: func.description,
-        parameters: func.parameters,
+        parameters: func.parameters as Record<string, any>,
       }
     }));
 

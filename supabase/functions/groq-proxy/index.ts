@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -41,7 +40,12 @@ serve(async (req) => {
       });
     }
 
-    console.log("Calling Groq API with messages:", JSON.stringify(messages, null, 2));
+    // Truncate messages if they're too long to avoid token limits
+    // Keep only the most recent messages to stay under the 6000 token limit
+    const maxMessages = 5; // Limit to last 5 messages to avoid token issues
+    const truncatedMessages = messages.slice(-maxMessages);
+
+    console.log("Calling Groq API with truncated messages count:", truncatedMessages.length);
 
     const groqRes = await fetch(GROQ_API_URL, {
       method: "POST",
@@ -50,10 +54,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "deepseek-r1-distill-llama-70b",
-        messages,
+        model: "llama-3.1-70b-versatile", // Using a more reliable model
+        messages: truncatedMessages,
         temperature: 0.6,
-        max_tokens: 4096,
+        max_tokens: 2048, // Reduced to avoid token limits
         top_p: 0.95,
       }),
     });
