@@ -106,10 +106,6 @@ export const Chatbot = ({
     await removeLeftover(leftoverId);
   };
 
-
-
-
-
   // Wrapper function to match CRUD interface for shopping list updates
   const onUpdateShoppingListItemCrud = async (itemName: string, updates: { quantity?: number; unit?: string }) => {
     await updateShoppingListItem(itemName, updates.quantity, updates.unit);
@@ -219,6 +215,7 @@ export const Chatbot = ({
             items={shoppingListItems || []}
             onRemove={removeShoppingListItem}
             onUpdate={updateShoppingListItem}
+            onAdd={addShoppingListItems}
             session={session}
           />
         </DialogContent>
@@ -234,6 +231,7 @@ export const Chatbot = ({
             isLoading={leftoverLoading}
             onRemove={removeLeftover}
             onUpdateServings={handleUpdateLeftoverServings}
+            onAdd={addLeftover}
           />
         </DialogContent>
       </Dialog>

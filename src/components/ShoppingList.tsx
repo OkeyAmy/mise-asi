@@ -1,10 +1,11 @@
+
 import * as React from "react";
 import { ShoppingListItem } from "@/data/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Download, Share2, Edit, Check, X, Eye, Copy, Loader2 } from "lucide-react";
+import { Download, Share2, Edit, Check, X, Eye, Copy, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -32,11 +33,12 @@ interface ShoppingListProps {
   items: ShoppingListItem[];
   onRemove: (item: string) => void;
   onUpdate?: (itemName: string, quantity: number, unit: string) => void;
+  onAdd?: (items: ShoppingListItem[]) => void;
   isLoading?: boolean;
   session?: Session | null;
 }
 
-export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: ShoppingListProps) => {
+export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, session }: ShoppingListProps) => {
   const [checkedItems, setCheckedItems] = React.useState<Set<string>>(new Set());
   const [itemToRemove, setItemToRemove] = React.useState<ShoppingListItem | null>(null);
   const [editingItem, setEditingItem] = React.useState<string | null>(null);
@@ -44,6 +46,14 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
   const [viewingProduct, setViewingProduct] = React.useState<string | null>(null);
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [shareUrl, setShareUrl] = React.useState<string>("");
+  
+  // Add item form state
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const [newItem, setNewItem] = React.useState<{ item: string; quantity: number; unit: string }>({
+    item: "",
+    quantity: 1,
+    unit: "piece"
+  });
   
   const { createShareableLink, isCreating } = useSharedShoppingList(session);
   const { toast } = useToast();
@@ -85,6 +95,22 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
 
   const handleViewProduct = (productName: string) => {
     setViewingProduct(productName);
+  };
+
+  const handleAddItem = () => {
+    if (newItem.item.trim() && onAdd) {
+      onAdd([{
+        item: newItem.item.trim(),
+        quantity: newItem.quantity,
+        unit: newItem.unit
+      }]);
+      setNewItem({ item: "", quantity: 1, unit: "piece" });
+      setShowAddForm(false);
+      toast({
+        title: "Item added",
+        description: `${newItem.item} has been added to your shopping list.`,
+      });
+    }
   };
 
   const formatShoppingList = () => {
@@ -184,12 +210,54 @@ export const ShoppingList = ({ items, onRemove, onUpdate, isLoading, session }: 
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Your Smart Shopping List</CardTitle>
-          <CardDescription>
-            Only items you need for your meal plan are listed here. Click edit to adjust quantities or view to see Amazon options.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Your Smart Shopping List</CardTitle>
+              <CardDescription>
+                Only items you need for your meal plan are listed here. Click edit to adjust quantities or view to see Amazon options.
+              </CardDescription>
+            </div>
+            <Button onClick={() => setShowAddForm(!showAddForm)} size="sm" variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {showAddForm && (
+            <div className="mb-4 p-4 border rounded-lg bg-muted/50">
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <Input
+                  placeholder="Item name"
+                  value={newItem.item}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, item: e.target.value }))}
+                />
+                <Input
+                  type="number"
+                  placeholder="Quantity"
+                  value={newItem.quantity}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 1 }))}
+                  min="0"
+                  step="0.1"
+                />
+                <Input
+                  placeholder="Unit"
+                  value={newItem.unit}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleAddItem} size="sm" disabled={!newItem.item.trim()}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+                <Button onClick={() => setShowAddForm(false)} size="sm" variant="outline">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
             {(isLoading ? <div>Loading...</div> : null)}
             {items.map((item) => (
