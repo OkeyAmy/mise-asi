@@ -1,13 +1,11 @@
 
 import OpenAI from "openai";
 import { Content, FunctionCall } from "@google/generative-ai";
-import { mealPlanningTools } from '../functions/mealPlanningTools';
-import { executeMealPlanningFunction } from '../functions/executeFunctions';
-import { FunctionCallResult } from '../functions/types';
+import { tools } from './tools';
 import { getSystemPrompt } from "../prompts/systemPrompt";
 import { StreamHandlers } from "./api";
 
-// Groq fallback function using OpenAI SDK
+// Groq fallback function using OpenAI SDK to work exactly like Gemini
 export async function callGroqWithStreaming(
   contents: Content[],
   handlers: StreamHandlers
@@ -15,12 +13,10 @@ export async function callGroqWithStreaming(
   try {
     console.log("Falling back to Groq with OpenAI SDK, model: deepseek-r1-distill-llama-70b");
 
-    const groqApiKey =
-      process.env.GROQ_API_KEY ||
-      (typeof window !== "undefined" && localStorage.getItem("groq_api_key"));
+    const groqApiKey = Deno.env.get("GROQ_API_KEY");
 
     if (!groqApiKey) {
-      throw new Error("Groq API key not found. Please set GROQ_API_KEY.");
+      throw new Error("Groq API key not found in Supabase secrets. Please set GROQ_API_KEY.");
     }
 
     const openai = new OpenAI({
@@ -30,15 +26,35 @@ export async function callGroqWithStreaming(
     });
 
     // Convert Gemini format to OpenAI format for Groq
-    const messages = contents.map((content) => ({
-      role: content.role === "model" ? ("assistant" as const) : (content.role as "user" | "system"),
-      content: content.parts.map((part) => 'text' in part ? part.text : "").join(""),
-    }));
+    const messages = contents.map((content) => {
+      if (content.role === "model") {
+        return {
+          role: "assistant" as const,
+          content: content.parts.map((part) => 'text' in part ? part.text : "").join(""),
+        };
+      } else {
+        return {
+          role: content.role as "user" | "system",
+          content: content.parts.map((part) => 'text' in part ? part.text : "").join(""),
+        };
+      }
+    });
 
+    // Add system message at the beginning
     messages.unshift({
       role: "system" as const,
       content: getSystemPrompt(),
     });
+
+    // Convert Gemini tools to OpenAI format
+    const openAITools = tools[0].functionDeclarations.map(func => ({
+      type: "function" as const,
+      function: {
+        name: func.name,
+        description: func.description,
+        parameters: func.parameters,
+      }
+    }));
 
     const chatCompletion = await openai.chat.completions.create({
       model: "deepseek-r1-distill-llama-70b",
@@ -47,39 +63,28 @@ export async function callGroqWithStreaming(
       max_tokens: 4096,
       top_p: 0.95,
       stream: true,
-      tools: mealPlanningTools,
+      tools: openAITools,
     });
 
     let accumulatedText = "";
-    let functionCalls: FunctionCallResult[] = [];
+    let functionCalls: any[] = [];
 
     for await (const chunk of chatCompletion) {
       const choice = chunk.choices[0];
       if (!choice) continue;
 
-      // Handle function calls
+      // Handle function calls - convert back to Gemini format
       if (choice.delta.tool_calls) {
         for (const toolCall of choice.delta.tool_calls) {
           if (toolCall.function) {
-            const functionCall: FunctionCallResult = {
-              type: "function_call",
-              id: toolCall.id || `fc_${Date.now()}`,
-              call_id: `call_${Date.now()}`,
+            const functionCall: FunctionCall = {
               name: toolCall.function.name || "",
-              arguments: toolCall.function.arguments || "{}",
+              args: JSON.parse(toolCall.function.arguments || "{}"),
             };
             
             functionCalls.push(functionCall);
-            handlers.onFunctionCall(functionCall as any); // Cast to any to satisfy handler
+            handlers.onFunctionCall(functionCall);
             handlers.onThought(`🔨 Executing function: ${functionCall.name}`);
-            
-            // Execute the function
-            try {
-              const result = await executeMealPlanningFunction(functionCall);
-              handlers.onThought(`✅ Function result: ${result}`);
-            } catch (error) {
-              handlers.onThought(`❌ Function error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
           }
         }
       }
@@ -96,5 +101,94 @@ export async function callGroqWithStreaming(
   } catch (error) {
     console.error("Groq API (OpenAI SDK) error:", error);
     handlers.onError(error instanceof Error ? error : new Error("Groq API error"));
+  }
+}
+
+// Non-streaming Groq function for single responses (like after function calls)
+export async function callGroq(contents: Content[]): Promise<any> {
+  try {
+    console.log("Calling Groq non-streaming fallback");
+
+    const groqApiKey = Deno.env.get("GROQ_API_KEY");
+
+    if (!groqApiKey) {
+      throw new Error("Groq API key not found in Supabase secrets. Please set GROQ_API_KEY.");
+    }
+
+    const openai = new OpenAI({
+      apiKey: groqApiKey,
+      baseURL: "https://api.groq.com/openai/v1",
+      dangerouslyAllowBrowser: true,
+    });
+
+    // Convert Gemini format to OpenAI format
+    const messages = contents.map((content) => {
+      if (content.role === "model") {
+        return {
+          role: "assistant" as const,
+          content: content.parts.map((part) => 'text' in part ? part.text : "").join(""),
+        };
+      } else {
+        return {
+          role: content.role as "user" | "system",
+          content: content.parts.map((part) => 'text' in part ? part.text : "").join(""),
+        };
+      }
+    });
+
+    messages.unshift({
+      role: "system" as const,
+      content: getSystemPrompt(),
+    });
+
+    // Convert tools to OpenAI format
+    const openAITools = tools[0].functionDeclarations.map(func => ({
+      type: "function" as const,
+      function: {
+        name: func.name,
+        description: func.description,
+        parameters: func.parameters,
+      }
+    }));
+
+    const response = await openai.chat.completions.create({
+      model: "deepseek-r1-distill-llama-70b",
+      messages,
+      temperature: 0.6,
+      max_tokens: 4096,
+      top_p: 0.95,
+      tools: openAITools,
+    });
+
+    // Convert response back to Gemini format
+    const choice = response.choices[0];
+    const parts = [];
+
+    if (choice.message.content) {
+      parts.push({ text: choice.message.content });
+    }
+
+    if (choice.message.tool_calls) {
+      for (const toolCall of choice.message.tool_calls) {
+        if (toolCall.function) {
+          parts.push({
+            functionCall: {
+              name: toolCall.function.name,
+              args: JSON.parse(toolCall.function.arguments || "{}"),
+            }
+          });
+        }
+      }
+    }
+
+    return {
+      candidates: [{
+        content: { parts }
+      }]
+    };
+
+  } catch (error) {
+    console.error("Groq non-streaming API error:", error);
+    throw error;
   }
 }
