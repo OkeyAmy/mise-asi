@@ -62,26 +62,26 @@ export const LeftoversDialog = ({ items, isLoading, onRemove, onUpdateServings, 
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Your Leftovers</CardTitle>
-          <Button onClick={() => setShowAddForm(!showAddForm)} size="sm" variant="outline">
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-lg sm:text-xl">Your Leftovers</CardTitle>
+          <Button onClick={() => setShowAddForm(!showAddForm)} size="sm" variant="outline" className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Add Leftover
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {showAddForm && (
-          <div className="mb-4 p-4 border rounded-lg bg-muted/50">
+          <div className="mb-4 p-3 sm:p-4 border rounded-lg bg-muted/50">
             <div className="space-y-3">
               <Input
                 placeholder="Meal name"
                 value={newLeftover.meal_name}
                 onChange={(e) => setNewLeftover(prev => ({ ...prev, meal_name: e.target.value }))}
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Input
                   type="number"
                   placeholder="Servings"
@@ -101,12 +101,12 @@ export const LeftoversDialog = ({ items, isLoading, onRemove, onUpdateServings, 
                 onChange={(e) => setNewLeftover(prev => ({ ...prev, notes: e.target.value }))}
               />
             </div>
-            <div className="flex gap-2 mt-3">
-              <Button onClick={handleAddLeftover} size="sm" disabled={!newLeftover.meal_name.trim()}>
+            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+              <Button onClick={handleAddLeftover} size="sm" disabled={!newLeftover.meal_name.trim()} className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-1" />
                 Add
               </Button>
-              <Button onClick={() => setShowAddForm(false)} size="sm" variant="outline">
+              <Button onClick={() => setShowAddForm(false)} size="sm" variant="outline" className="w-full sm:w-auto">
                 Cancel
               </Button>
             </div>
@@ -114,33 +114,33 @@ export const LeftoversDialog = ({ items, isLoading, onRemove, onUpdateServings, 
         )}
 
         {isLoading ? (
-          <p>Loading leftovers...</p>
+          <div className="text-center py-4">Loading leftovers...</div>
         ) : items.length === 0 ? (
-          <p>You have no leftovers. Good job!</p>
+          <div className="text-center py-8">You have no leftovers. Good job!</div>
         ) : (
           <ScrollArea className="h-72">
-            <ul className="space-y-4">
+            <ul className="space-y-3">
               {items.map((item) => (
-                <li key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                  <div>
-                    <p className="font-semibold">{item.meal_name}</p>
+                <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{item.meal_name}</p>
                     <p className="text-sm text-muted-foreground">
                       Created: {new Date(item.date_created).toLocaleDateString()}
                     </p>
-                    {item.notes && <p className="text-xs text-muted-foreground italic">Notes: {item.notes}</p>}
+                    {item.notes && <p className="text-xs text-muted-foreground italic mt-1 line-clamp-2">Notes: {item.notes}</p>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleServingsChange(item.id, item.servings, -1)} disabled={item.servings <= 0}>
-                            <Minus className="h-4 w-4" />
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1 bg-background rounded-md p-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleServingsChange(item.id, item.servings, -1)} disabled={item.servings <= 0}>
+                            <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="font-mono w-8 text-center">{item.servings}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleServingsChange(item.id, item.servings, 1)}>
-                            <Plus className="h-4 w-4" />
+                        <span className="font-mono w-8 text-center text-sm">{item.servings}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleServingsChange(item.id, item.servings, 1)}>
+                            <Plus className="h-3 w-3" />
                         </Button>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)} className="text-destructive h-8 w-8">
-                      <Trash2 className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)} className="text-destructive h-8 w-8 flex-shrink-0">
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </li>

@@ -208,29 +208,30 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Your Smart Shopping List</CardTitle>
-              <CardDescription>
+      <Card className="w-full">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <CardTitle className="text-lg sm:text-xl">Your Smart Shopping List</CardTitle>
+              <CardDescription className="text-sm mt-1">
                 Only items you need for your meal plan are listed here. Click edit to adjust quantities or view to see Amazon options.
               </CardDescription>
             </div>
-            <Button onClick={() => setShowAddForm(!showAddForm)} size="sm" variant="outline">
+            <Button onClick={() => setShowAddForm(!showAddForm)} size="sm" variant="outline" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Add Item
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {showAddForm && (
-            <div className="mb-4 p-4 border rounded-lg bg-muted/50">
-              <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="mb-4 p-3 sm:p-4 border rounded-lg bg-muted/50">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
                 <Input
                   placeholder="Item name"
                   value={newItem.item}
                   onChange={(e) => setNewItem(prev => ({ ...prev, item: e.target.value }))}
+                  className="col-span-1 sm:col-span-1"
                 />
                 <Input
                   type="number"
@@ -239,44 +240,47 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
                   onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 1 }))}
                   min="0"
                   step="0.1"
+                  className="col-span-1 sm:col-span-1"
                 />
                 <Input
                   placeholder="Unit"
                   value={newItem.unit}
                   onChange={(e) => setNewItem(prev => ({ ...prev, unit: e.target.value }))}
+                  className="col-span-1 sm:col-span-1"
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleAddItem} size="sm" disabled={!newItem.item.trim()}>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleAddItem} size="sm" disabled={!newItem.item.trim()} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-1" />
                   Add
                 </Button>
-                <Button onClick={() => setShowAddForm(false)} size="sm" variant="outline">
+                <Button onClick={() => setShowAddForm(false)} size="sm" variant="outline" className="w-full sm:w-auto">
                   Cancel
                 </Button>
               </div>
             </div>
           )}
           
-          <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-            {(isLoading ? <div>Loading...</div> : null)}
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+            {(isLoading ? <div className="text-center py-4">Loading...</div> : null)}
             {items.map((item) => (
               <div
                 key={`${item.item}-${item.unit}`}
-                className="flex items-center justify-between p-2 rounded-md hover:bg-muted group"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-md hover:bg-muted group gap-3 sm:gap-4"
               >
-                <div className="flex items-center gap-4 flex-1">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Checkbox
                     id={`${item.item}-${item.unit}`}
                     checked={checkedItems.has(item.item) || itemToRemove?.item === item.item}
                     onCheckedChange={(checked) =>
                       handleCheckedChange(!!checked, item)
                     }
+                    className="flex-shrink-0"
                   />
                   <label
                     htmlFor={`${item.item}-${item.unit}`}
                     className={cn(
-                      "text-sm font-medium leading-none transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1",
+                      "text-sm font-medium leading-none transition-colors peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 min-w-0 truncate",
                       (checkedItems.has(item.item) || itemToRemove?.item === item.item) && "line-through text-muted-foreground"
                     )}
                   >
@@ -285,38 +289,40 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
                 </div>
                 
                 {/* Quantity/Unit Display or Edit Mode */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {editingItem === item.item ? (
                     // Edit mode
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Input
                         type="number"
                         value={editValues.quantity}
                         onChange={(e) => setEditValues(prev => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                        className="w-16 h-8 text-sm"
+                        className="w-16 h-8 text-sm flex-shrink-0"
                         min="0"
                         step="0.1"
                       />
                       <Input
                         value={editValues.unit}
                         onChange={(e) => setEditValues(prev => ({ ...prev, unit: e.target.value }))}
-                        className="w-20 h-8 text-sm"
+                        className="w-20 h-8 text-sm flex-shrink-0"
                         placeholder="unit"
                       />
-                      <Button size="sm" variant="ghost" onClick={handleEditSave} className="h-8 w-8 p-0">
-                        <Check className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={handleEditCancel} className="h-8 w-8 p-0">
-                        <X className="h-4 w-4 text-red-600" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" onClick={handleEditSave} className="h-8 w-8 p-0 flex-shrink-0">
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={handleEditCancel} className="h-8 w-8 p-0 flex-shrink-0">
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
                     </div>
                   ) : (
-                    // Display mode - buttons now always visible
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-muted-foreground">
+                    // Display mode
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="text-sm text-muted-foreground whitespace-nowrap">
                         {item.quantity} {item.unit}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <Button 
                           size="sm" 
                           variant="ghost" 
@@ -324,7 +330,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
                           className="h-8 w-8 p-0"
                           title="View on Amazon"
                         >
-                          <Eye className="h-4 w-4 text-blue-600" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                         </Button>
                         {onUpdate && (
                           <Button 
@@ -334,7 +340,7 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
                             className="h-8 w-8 p-0"
                             title="Edit quantity"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         )}
                       </div>
@@ -344,12 +350,12 @@ export const ShoppingList = ({ items, onRemove, onUpdate, onAdd, isLoading, sess
               </div>
             ))}
             {items.length === 0 && !isLoading && (
-              <div className="text-center text-muted-foreground my-12">
+              <div className="text-center text-muted-foreground py-8 sm:py-12">
                 No more items! All done 🎉
               </div>
             )}
           </div>
-          <div className="flex gap-2 mt-6">
+          <div className="flex flex-col sm:flex-row gap-2 mt-6">
             <Button className="w-full" onClick={handleDownload}>
               <Download className="mr-2 h-4 w-4" /> Download
             </Button>
