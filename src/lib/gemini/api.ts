@@ -2,7 +2,7 @@
 import { GoogleGenerativeAI, Part, Content, GenerateContentResponse, FunctionCall } from "@google/generative-ai";
 import { getSystemPrompt } from "../prompts/systemPrompt";
 import { tools } from "./tools";
-import { callGroqWithStreaming, callGroq } from './groq';
+import { callGroqWithStreaming } from './groq';
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
@@ -11,7 +11,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   }
 
   try {
-    console.log("Calling Gemini with model: gemini-2.5-pro");
+    console.log("Calling Gemini with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-pro",
@@ -22,32 +22,24 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
     const { response } = await model.generateContent({ contents });
     return response;
   } catch (error) {
-    console.error("Detailed Gemini API error, falling back to Groq:", error);
+    console.error("Detailed Gemini API error:", error);
     
-    // Fallback to Groq for non-streaming calls
-    try {
-      return await callGroq(contents);
-    } catch (groqError) {
-      console.error("Groq fallback also failed:", groqError);
-      
-      // Provide meaningful error messages
-      if (error instanceof Error) {
-        if (error.message.includes('API key not valid') || 
-            error.message.includes('API_KEY_INVALID') ||
-            error.message.includes('invalid API key')) {
-          throw new Error("The provided API key is not valid. Please check and try again.");
-        }
-        if (error.message.includes('quota') || error.message.includes('billing')) {
-          throw new Error("API quota exceeded or billing issue. Please check your Gemini API account.");
-        }
-        if (error.message.includes('model') || error.message.includes('not found')) {
-          throw new Error("The requested Gemini model is not available. Please try again later.");
-        }
-        throw new Error(`API Error: ${error.message}`);
+    if (error instanceof Error) {
+      if (error.message.includes('API key not valid') || 
+          error.message.includes('API_KEY_INVALID') ||
+          error.message.includes('invalid API key')) {
+        throw new Error("The provided API key is not valid. Please check and try again.");
       }
-      
-      throw new Error("An unexpected error occurred while connecting to AI services. Please try again.");
+      if (error.message.includes('quota') || error.message.includes('billing')) {
+        throw new Error("API quota exceeded or billing issue. Please check your Gemini API account.");
+      }
+      if (error.message.includes('model') || error.message.includes('not found')) {
+        throw new Error("The requested Gemini model is not available. Please try again later.");
+      }
+      throw new Error(`Gemini API Error: ${error.message}`);
     }
+    
+    throw new Error("An unexpected error occurred while connecting to Gemini AI. Please try again.");
   }
 }
 
@@ -71,7 +63,7 @@ export async function callGeminiWithStreaming(
   }
 
   try {
-    console.log("Calling Gemini streaming with model: gemini-2.5-pro");
+    console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-pro",
