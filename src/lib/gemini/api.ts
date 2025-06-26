@@ -2,7 +2,6 @@
 import { GoogleGenerativeAI, Part, Content, GenerateContentResponse, FunctionCall } from "@google/generative-ai";
 import { getSystemPrompt } from "../prompts/systemPrompt";
 import { tools } from "./tools";
-import { callGroqWithStreaming } from './groq';
 
 // This function is for non-streaming, single-response calls (e.g., after a function call)
 export async function callGemini(apiKey: string, contents: Content[]): Promise<GenerateContentResponse> {
@@ -11,7 +10,7 @@ export async function callGemini(apiKey: string, contents: Content[]): Promise<G
   }
 
   try {
-    console.log("Calling Gemini with model: gemini-2.5-flash-preview-05-20");
+    console.log("Calling Gemini with model: gemini-2.5-pro");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-pro",
@@ -63,7 +62,7 @@ export async function callGeminiWithStreaming(
   }
 
   try {
-    console.log("Calling Gemini streaming with model: gemini-2.5-flash-preview-05-20");
+    console.log("Calling Gemini streaming with model: gemini-2.5-pro");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-pro",
@@ -96,8 +95,7 @@ export async function callGeminiWithStreaming(
     await handlers.onComplete();
 
   } catch (error) {
-    console.error("Detailed Gemini API error, falling back to Groq:", error);
-    handlers.onThought("Gemini not responding, switching to Groq fallback...");
-    await callGroqWithStreaming(contents, handlers);
+    console.error("Gemini streaming API error:", error);
+    handlers.onError(error instanceof Error ? error : new Error("Gemini streaming API error"));
   }
 }

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -10,10 +11,17 @@ serve(async (req) => {
   }
 
   try {
+    if (!GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY not found in environment");
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const body = await req.json();
 
     // Prepare the request payload for Gemini API
-    // Include systemInstruction if provided
     const geminiPayload: any = {
       contents: body.contents,
       tools: body.tools
@@ -49,7 +57,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error(e);
+    console.error("Gemini proxy error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

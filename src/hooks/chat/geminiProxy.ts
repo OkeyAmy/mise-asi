@@ -1,13 +1,11 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Content } from "@google/generative-ai";
 import { tools } from '@/lib/gemini/tools';
 import { getSystemPrompt } from '@/lib/prompts/systemPrompt';
 
 export async function callGeminiProxy(history: Content[]) {
-    // The Gemini REST API expects snake_case for its keys (e.g., "function_declarations"),
-    // but the tools object from our library uses camelCase ("functionDeclarations").
-    // We need to transform it before sending it to the proxy function.
-    // I am assuming `tools` is an array of objects, each with a `functionDeclarations` property.
+    // Transform tools for Gemini API (snake_case for REST API)
     const toolsForProxy = (tools as any[])?.map(tool => {
         if (tool.functionDeclarations) {
             return { function_declarations: tool.functionDeclarations };
@@ -15,19 +13,42 @@ export async function callGeminiProxy(history: Content[]) {
         return tool;
     });
 
-    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-        body: { 
-            contents: history,
-            tools: toolsForProxy,
-            systemInstruction: {
-                parts: [{ text: getSystemPrompt() }]
+    const payload = { 
+        contents: history,
+        tools: toolsForProxy,
+        systemInstruction: {
+            parts: [{ text: getSystemPrompt() }]
+        }
+    };
+
+    try {
+        console.log("Attempting Gemini proxy call...");
+        const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+            body: payload,
+        });
+
+        if (error) {
+            throw new Error(`Gemini proxy failed: ${error.message}`);
+        }
+
+        return data;
+    } catch (geminiError) {
+        console.log("Gemini proxy failed, attempting Groq fallback:", geminiError);
+        
+        try {
+            const { data, error } = await supabase.functions.invoke('groq-proxy', {
+                body: payload,
+            });
+
+            if (error) {
+                throw new Error(`Groq fallback failed: ${error.message}`);
             }
-        },
-    });
 
-    if (error) {
-        throw new Error(`Error calling gemini-proxy: ${error.message}`);
+            console.log("Groq fallback successful");
+            return data;
+        } catch (groqError) {
+            console.error("Both Gemini and Groq proxies failed:", groqError);
+            throw new Error(`Both Gemini and Groq proxies failed: ${groqError.message}`);
+        }
     }
-
-    return data;
 }
