@@ -37,10 +37,10 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
             )}
             
             <div className={cn(
-              "max-w-[80%] rounded-xl p-4 text-sm shadow-sm chat-message-hover",
+              "max-w-[80%] glass-card p-4 text-sm font-inter tracking-tight shadow-lg chat-message-hover",
               message.sender === "user" 
-                ? "chat-message-user text-primary-foreground rounded-br-sm" 
-                : "chat-message-bot text-card-foreground rounded-bl-sm"
+                ? "glass-button-primary text-primary-foreground rounded-br-lg" 
+                : "glass-medium text-card-foreground rounded-bl-lg border-border/20"
             )}>
               {message.sender === "bot" ? (
                 <MarkdownRenderer content={message.text} />
@@ -66,11 +66,11 @@ export const ChatMessageList = ({ messages, isThinking }: ChatMessageListProps) 
                 <Bot className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
-            <div className="max-w-[80%] rounded-xl p-4 text-sm chat-message-bot text-card-foreground rounded-bl-sm">
+            <div className="max-w-[80%] glass-medium p-4 text-sm glass-card text-card-foreground rounded-bl-lg border-border/20 font-inter tracking-tight">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse"></div>
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse [animation-delay:0.2s]"></div>
-                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse [animation-delay:0.4s]"></div>
+                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse glass-pulse"></div>
+                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse glass-pulse [animation-delay:0.2s]"></div>
+                <div className="w-2 h-2 rounded-full bg-primary/60 animate-pulse glass-pulse [animation-delay:0.4s]"></div>
               </div>
             </div>
           </div>

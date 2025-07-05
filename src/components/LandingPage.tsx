@@ -108,15 +108,15 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 flex flex-col font-inter">
       {/* Header */}
       <header className="w-full p-6">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <Logo className="text-2xl" />
           <Button 
-            variant="outline" 
+            variant="ghost" 
             onClick={() => navigate('/auth')}
-            className="text-orange-600 border-orange-200 hover:bg-orange-50"
+            className="glass-pill"
           >
             Sign In
           </Button>
@@ -128,10 +128,10 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="space-y-8">
-            <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight min-h-[120px] lg:min-h-[160px]">
+            <h1 className="text-4xl lg:text-6xl font-bold text-foreground leading-tight min-h-[120px] lg:min-h-[160px] tracking-tight">
               <span className="block">Know your kitchen.</span>
-              <span className="block text-orange-500">Own your meals.</span>
-              <div className="mt-4 text-2xl lg:text-3xl text-gray-700">
+              <span className="block text-primary glass-shimmer">Own your meals.</span>
+              <div className="mt-4 text-2xl lg:text-3xl text-muted-foreground">
                 <TypingAnimation 
                   texts={featureTexts}
                   typingSpeed={80}
@@ -146,14 +146,14 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
                 size="lg" 
                 onClick={handleGetStarted}
                 disabled={isLoading}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 text-lg"
+                className="glass-button-primary px-8 py-3 text-lg h-12 glass-glow"
               >
                 {isLoading ? 'Getting Started...' : 'Get Started Free'}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
 
-            <div className="flex items-center gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-6 text-sm text-muted-foreground/80">
               <span className="flex items-center gap-1">
                 ✓ No credit card required
               </span>
@@ -168,7 +168,7 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
             {features.map((feature, index) => (
               <Card 
                 key={index} 
-                className="feature-card border-orange-100 hover:shadow-lg transition-all duration-300 animate-slide-up"
+                className="glass-card glass-hover border-glass-border/30 animate-slide-up"
                 style={{
                   animationDelay: `${index * 150}ms`,
                   opacity: 0,
@@ -177,13 +177,13 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
                 }}
               >
                 <CardHeader className="pb-3">
-                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mb-3">
-                    <feature.icon className="h-6 w-6 text-orange-500" />
+                  <div className="w-12 h-12 glass-light rounded-2xl flex items-center justify-center mb-3 border border-primary/20">
+                    <feature.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+                  <CardTitle className="text-lg tracking-tight">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-gray-600">
+                  <CardDescription className="text-muted-foreground tracking-tight">
                     {feature.description}
                   </CardDescription>
                 </CardContent>
@@ -194,7 +194,7 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
       </main>
 
       {/* Footer */}
-      <footer className="p-6 text-center text-gray-500 text-sm">
+      <footer className="p-6 text-center text-muted-foreground/60 text-sm">
         <div className="max-w-6xl mx-auto">
           © 2025 Mise AI. Empowering kitchens with intelligent nutrition assistance.
         </div>
