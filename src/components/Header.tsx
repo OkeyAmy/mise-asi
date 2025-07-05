@@ -21,9 +21,13 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => 
       <header className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-glass-border/30 p-2 sm:p-4">
         <div className="flex flex-col items-start w-full font-inter">
           <div className="flex justify-between items-center w-full">
-            <div>
-              <Logo className="text-lg" />
-            </div>
+          <button 
+            onClick={handleLogout}
+            className="text-left hover:opacity-80 transition-opacity duration-200"
+            aria-label="Logout and return to landing page"
+          >
+            <Logo className="text-lg" />
+          </button>
             <div className="flex gap-1 sm:gap-2">
               <Button 
                 variant="ghost" 
