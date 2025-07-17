@@ -3,13 +3,11 @@ import { Chatbot } from "@/components/Chatbot";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { Header } from "@/components/Header";
 import { LandingPage } from "@/components/LandingPage";
-import { VideoTrigger } from "@/components/VideoTrigger";
 import { ThoughtStep } from '@/data/schema';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
@@ -22,7 +20,6 @@ const Index = () => {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   // Check for pending AI message from shared shopping list import
   useEffect(() => {
@@ -116,9 +113,6 @@ const Index = () => {
   return (
     <div className="h-screen-safe bg-background text-foreground flex flex-col relative">
       <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
-      
-      {/* Video Recording Trigger */}
-      <VideoTrigger isMobile={isMobile} />
       
       {/* Main content area - full width, chat interface is always accessible */}
       <div className="flex-1 pt-20 relative min-h-0">
