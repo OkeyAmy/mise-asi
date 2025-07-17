@@ -5,64 +5,7 @@ import { ChefHat, ShoppingCart, Package, Utensils, ArrowRight, Star, Users, Chec
 import { Logo } from '@/components/Logo';
 import { useNavigate } from 'react-router-dom';
 import { TypingAnimation } from '@/components/TypingAnimation';
-
-// A/B Test Configuration - Change these values to test different variants
-const AB_TEST_CONFIG = {
-  // CTA Button Text Variants
-  ctaText: {
-    control: "Get Started Free",
-    variantA: "Plan My Meals for Free", 
-    variantB: "Organize My Kitchen Free"
-  },
-  
-  // Headline Variants
-  headline: {
-    control: {
-      line1: "Know your kitchen.",
-      line2: "Own your meals.",
-      useTypingAnimation: false
-    },
-    variantA: {
-      line1: "The AI assistant that knows",
-      line2: "what's in your pantry.",
-      useTypingAnimation: true
-    },
-    variantB: {
-      line1: "Stop guessing what's for dinner.",
-      line2: "Start cooking with what you have.",
-      useTypingAnimation: true
-    }
-  },
-  
-  // Social Proof Display
-  showSocialProof: true,
-  
-  // Current active variants (change these to test different combinations)
-  activeCTA: "variantA", // "control", "variantA", or "variantB"
-  activeHeadline: "variantA", // "control", "variantA", or "variantB"
-};
-
-// Social Proof Data
-const testimonials = [
-  {
-    name: "Sarah K.",
-    location: "Austin, TX",
-    quote: "Mise has transformed our weeknight dinners! No more food waste.",
-    rating: 5
-  },
-  {
-    name: "Mike R.",
-    location: "Portland, OR", 
-    quote: "Finally, an app that knows what I have in my fridge. Game changer!",
-    rating: 5
-  },
-  {
-    name: "Jennifer L.",
-    location: "Chicago, IL",
-    quote: "I save $200+ monthly on groceries and eat better. Worth every penny.",
-    rating: 5
-  }
-];
+import { useABTesting } from '@/hooks/useABTesting';
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -71,10 +14,55 @@ interface LandingPageProps {
 export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
+  // Use the automatic A/B testing hook
+  const {
+    currentCTAText,
+    currentHeadline,
+    showSocialProof,
+    trackConversion,
+    trackEvent
+  } = useABTesting();
 
-  // Get active configurations
-  const currentCTA = AB_TEST_CONFIG.ctaText[AB_TEST_CONFIG.activeCTA];
-  const currentHeadline = AB_TEST_CONFIG.headline[AB_TEST_CONFIG.activeHeadline];
+  const handleGetStarted = async () => {
+    setIsLoading(true);
+    
+    // Track conversion event for A/B testing
+    trackConversion('cta_click');
+    
+    try {
+      await onGetStarted();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignIn = () => {
+    trackEvent('sign_in_click', { location: 'header' });
+    navigate('/auth');
+  };
+
+  // Social Proof Data
+  const testimonials = [
+    {
+      name: "Sarah K.",
+      location: "Austin, TX",
+      quote: "Mise has transformed our weeknight dinners! No more food waste.",
+      rating: 5
+    },
+    {
+      name: "Mike R.",
+      location: "Portland, OR", 
+      quote: "Finally, an app that knows what I have in my fridge. Game changer!",
+      rating: 5
+    },
+    {
+      name: "Jennifer L.",
+      location: "Chicago, IL",
+      quote: "I save $200+ monthly on groceries and eat better. Worth every penny.",
+      rating: 5
+    }
+  ];
 
   // Add keyframes for card animation
   const slideUpKeyframes = `
@@ -144,11 +132,6 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
     "Meal planning made effortless.",
     "Dietary restrictions? No problem."
   ];
-
-  const handleGetStarted = async () => {
-    setIsLoading(true);
-    onGetStarted();
-  };
 
   // Social Proof Component
   const SocialProofSection = () => (
@@ -248,13 +231,17 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
           <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/auth')}
+            onClick={handleSignIn}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-500 hover:bg-white/20 transition-all duration-200 rounded-full border border-transparent hover:border-white/30"
           >
             Sign In
           </Button>
             {/* Mobile menu button */}
-            <button className="lg:hidden p-2 rounded-full hover:bg-white/20 transition-colors duration-200">
+            <button 
+              className="lg:hidden p-2 rounded-full hover:bg-white/20 transition-colors duration-200"
+              title="Open mobile menu"
+              aria-label="Open mobile menu"
+            >
               <svg className="h-5 w-5 text-gray-800 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -285,12 +272,12 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
 
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                size="lg" 
                 onClick={handleGetStarted}
                 disabled={isLoading}
                 className="glass-button-primary px-8 py-3 text-lg h-12 glass-glow"
+                title={currentCTAText}
               >
-                {isLoading ? 'Getting Started...' : currentCTA}
+                {isLoading ? 'Getting Started...' : currentCTAText}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
@@ -338,7 +325,7 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
       </main>
 
       {/* Social Proof Section */}
-      {AB_TEST_CONFIG.showSocialProof && (
+      {showSocialProof && (
         <section className="py-12 px-6">
           <SocialProofSection />
         </section>
