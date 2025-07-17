@@ -19,6 +19,7 @@ const Index = () => {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [pendingAIMessage, setPendingAIMessage] = useState<string | null>(null);
+  const [videoTrigger, setVideoTrigger] = useState<(() => void) | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
@@ -115,10 +116,17 @@ const Index = () => {
   // Show authenticated app
   return (
     <div className="h-screen-safe bg-background text-foreground flex flex-col relative">
-      <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
+      <Header 
+        onShoppingListOpen={() => setIsShoppingListOpen(true)} 
+        onLeftoversOpen={() => setIsLeftoversOpen(true)}
+        onVideoTrigger={videoTrigger || undefined}
+      />
       
       {/* Video Recording Trigger */}
-      <VideoTrigger isMobile={isMobile} />
+        <VideoTrigger 
+          isMobile={isMobile} 
+          onTriggerRef={setVideoTrigger}
+        />
       
       {/* Main content area - full width, chat interface is always accessible */}
       <div className="flex-1 pt-20 relative min-h-0">
