@@ -7,23 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 interface HeaderProps {
   onShoppingListOpen: () => void;
   onLeftoversOpen: () => void;
-  onVideoTrigger?: () => void;
 }
 
-export const Header = ({ onShoppingListOpen, onLeftoversOpen, onVideoTrigger }: HeaderProps) => {
+export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-  };
-
-  const handleLogoClick = () => {
-    // On desktop, trigger video if handler is provided, otherwise logout
-    if (onVideoTrigger && window.innerWidth >= 768) {
-      onVideoTrigger();
-    } else {
-      handleLogout();
-    }
   };
 
   return (
@@ -32,9 +22,9 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen, onVideoTrigger }: 
         <div className="flex flex-col items-start w-full font-inter">
           <div className="flex justify-between items-center w-full">
           <button 
-            onClick={handleLogoClick}
+            onClick={handleLogout}
             className="text-left hover:opacity-80 transition-opacity duration-200"
-            aria-label={onVideoTrigger && window.innerWidth >= 768 ? "Start video session" : "Logout and return to landing page"}
+            aria-label="Logout and return to landing page"
           >
             <Logo className="text-lg" />
           </button>

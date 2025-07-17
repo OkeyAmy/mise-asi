@@ -5,21 +5,13 @@ import { useToast } from '@/hooks/use-toast';
 
 interface VideoTriggerProps {
   isMobile?: boolean;
-  onTriggerRef?: (trigger: () => void) => void;
 }
 
-export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false, onTriggerRef }) => {
+export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false }) => {
   const [showVideoFlow, setShowVideoFlow] = useState(false);
   const [swipeStartY, setSwipeStartY] = useState<number | null>(null);
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const { toast } = useToast();
-
-  // Expose trigger function to parent component
-  useEffect(() => {
-    if (onTriggerRef) {
-      onTriggerRef(triggerVideoFlow);
-    }
-  }, [onTriggerRef]);
 
   // Mobile swipe gesture detection
   useEffect(() => {
@@ -66,8 +58,8 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false, on
     };
   }, [isMobile, swipeStartY, isSwipeActive]);
 
-  // Trigger video flow from external call (e.g., header logo)
-  const triggerVideoFlow = () => {
+  // Desktop logo click handler
+  const handleDesktopTrigger = () => {
     setShowVideoFlow(true);
   };
 
@@ -110,14 +102,26 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false, on
     );
   }
 
-  // Desktop: No UI rendered, just video flow when triggered
+  // Desktop: Floating logo trigger
   if (!isMobile) {
-    return showVideoFlow ? (
-      <VideoRecordingFlow
-        onClose={handleClose}
-        onVideoRecorded={handleVideoRecorded}
-      />
-    ) : null;
+    return (
+      <>
+        <button
+          onClick={handleDesktopTrigger}
+          className="fixed top-4 left-4 z-40 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:shadow-xl group"
+        >
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400/20 via-pink-400/20 to-violet-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <Sparkles className="w-6 h-6 text-white group-hover:text-cyan-300 transition-colors duration-300" />
+        </button>
+        
+        {showVideoFlow && (
+          <VideoRecordingFlow
+            onClose={handleClose}
+            onVideoRecorded={handleVideoRecorded}
+          />
+        )}
+      </>
+    );
   }
 
   // Mobile: Just return the video flow when triggered
