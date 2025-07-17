@@ -1,10 +1,68 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChefHat, ShoppingCart, Package, Utensils, ArrowRight } from 'lucide-react';
+import { ChefHat, ShoppingCart, Package, Utensils, ArrowRight, Star, Users, CheckCircle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useNavigate } from 'react-router-dom';
 import { TypingAnimation } from '@/components/TypingAnimation';
+
+// A/B Test Configuration - Change these values to test different variants
+const AB_TEST_CONFIG = {
+  // CTA Button Text Variants
+  ctaText: {
+    control: "Get Started Free",
+    variantA: "Plan My Meals for Free", 
+    variantB: "Organize My Kitchen Free"
+  },
+  
+  // Headline Variants
+  headline: {
+    control: {
+      line1: "Know your kitchen.",
+      line2: "Own your meals.",
+      useTypingAnimation: false
+    },
+    variantA: {
+      line1: "The AI assistant that knows",
+      line2: "what's in your pantry.",
+      useTypingAnimation: true
+    },
+    variantB: {
+      line1: "Stop guessing what's for dinner.",
+      line2: "Start cooking with what you have.",
+      useTypingAnimation: true
+    }
+  },
+  
+  // Social Proof Display
+  showSocialProof: true,
+  
+  // Current active variants (change these to test different combinations)
+  activeCTA: "variantA", // "control", "variantA", or "variantB"
+  activeHeadline: "variantA", // "control", "variantA", or "variantB"
+};
+
+// Social Proof Data
+const testimonials = [
+  {
+    name: "Sarah K.",
+    location: "Austin, TX",
+    quote: "Mise has transformed our weeknight dinners! No more food waste.",
+    rating: 5
+  },
+  {
+    name: "Mike R.",
+    location: "Portland, OR", 
+    quote: "Finally, an app that knows what I have in my fridge. Game changer!",
+    rating: 5
+  },
+  {
+    name: "Jennifer L.",
+    location: "Chicago, IL",
+    quote: "I save $200+ monthly on groceries and eat better. Worth every penny.",
+    rating: 5
+  }
+];
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -13,6 +71,10 @@ interface LandingPageProps {
 export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Get active configurations
+  const currentCTA = AB_TEST_CONFIG.ctaText[AB_TEST_CONFIG.activeCTA];
+  const currentHeadline = AB_TEST_CONFIG.headline[AB_TEST_CONFIG.activeHeadline];
 
   // Add keyframes for card animation
   const slideUpKeyframes = `
@@ -52,6 +114,10 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
       animation: borderGlow 1.5s ease-in-out infinite;
       transform: translateY(-2px);
     }
+
+    .testimonial-fade-in {
+      animation: slideUp 0.8s ease-out forwards;
+    }
   `;
 
   // Insert keyframes into document head
@@ -84,6 +150,55 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
     onGetStarted();
   };
 
+  // Social Proof Component
+  const SocialProofSection = () => (
+    <div className="max-w-4xl mx-auto mt-16 mb-8">
+      {/* User Count Badge */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
+          <Users className="h-4 w-4" />
+          Join over 10,000 home cooks saving time and reducing food waste
+        </div>
+      </div>
+
+      {/* Testimonials Grid */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {testimonials.map((testimonial, index) => (
+          <Card 
+            key={index}
+            className="glass-card border-glass-border/30 testimonial-fade-in"
+            style={{
+              animationDelay: `${index * 200}ms`,
+              opacity: 0
+            }}
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center gap-1 mb-3">
+                {[...Array(testimonial.rating)].map((_, i) => (
+                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                ))}
+              </div>
+              <blockquote className="text-muted-foreground mb-4 italic">
+                "{testimonial.quote}"
+              </blockquote>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 bg-primary/20 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary">
+                    {testimonial.name.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <div className="font-medium text-sm">{testimonial.name}</div>
+                  <div className="text-xs text-muted-foreground">{testimonial.location}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
   const features = [
     {
       icon: ChefHat,
@@ -110,27 +225,53 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/10 flex flex-col font-inter">
       {/* Header */}
-      <header className="w-full p-6">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <Logo className="text-2xl" />
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-4xl z-50">
+        <div className="flex items-center justify-between px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-lg">
+          {/* Logo Section */}
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">M</span>
+            </div>
+            <span className="font-bold text-lg hidden sm:inline text-gray-800 dark:text-white">
+              Mise
+            </span>
+          </div>
+
+          {/* Navigation Links - Hidden on mobile */}
+          {/* <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <a href="#features" className="hover:text-orange-500 transition-colors duration-200">Features</a>
+            <a href="#pricing" className="hover:text-orange-500 transition-colors duration-200">Pricing</a>
+            <a href="#about" className="hover:text-orange-500 transition-colors duration-200">About</a>
+          </div> */}
+
+          {/* Right Section */}
+          <div className="flex items-center gap-3">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/auth')}
-            className="glass-pill"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-orange-500 hover:bg-white/20 transition-all duration-200 rounded-full border border-transparent hover:border-white/30"
           >
             Sign In
           </Button>
+            {/* Mobile menu button */}
+            <button className="lg:hidden p-2 rounded-full hover:bg-white/20 transition-colors duration-200">
+              <svg className="h-5 w-5 text-gray-800 dark:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-6 pt-24">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="space-y-8">
             <h1 className="text-4xl lg:text-6xl font-bold text-foreground leading-tight min-h-[120px] lg:min-h-[160px] tracking-tight">
-              <span className="block">Know your kitchen.</span>
-              <span className="block text-primary glass-shimmer">Own your meals.</span>
+              <span className="block">{currentHeadline.line1}</span>
+              <span className="block text-primary glass-shimmer">{currentHeadline.line2}</span>
+              {currentHeadline.useTypingAnimation && (
               <div className="mt-4 text-2xl lg:text-3xl text-muted-foreground">
                 <TypingAnimation 
                   texts={featureTexts}
@@ -139,6 +280,7 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
                   pauseDuration={3000}
                 />
               </div>
+              )}
             </h1>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -148,17 +290,19 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
                 disabled={isLoading}
                 className="glass-button-primary px-8 py-3 text-lg h-12 glass-glow"
               >
-                {isLoading ? 'Getting Started...' : 'Get Started Free'}
+                {isLoading ? 'Getting Started...' : currentCTA}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
 
             <div className="flex items-center gap-6 text-sm text-muted-foreground/80">
               <span className="flex items-center gap-1">
-                ✓ No credit card required
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                No credit card required
               </span>
               <span className="flex items-center gap-1">
-                ✓ Setup in 2 minutes
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                Setup in 2 minutes
               </span>
             </div>
           </div>
@@ -192,6 +336,13 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
           </div>
         </div>
       </main>
+
+      {/* Social Proof Section */}
+      {AB_TEST_CONFIG.showSocialProof && (
+        <section className="py-12 px-6">
+          <SocialProofSection />
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="p-6 text-center text-muted-foreground/60 text-sm">
