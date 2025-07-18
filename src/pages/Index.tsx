@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Chatbot } from "@/components/Chatbot";
+import { MobileChatInterface } from "@/components/MobileChatInterface";
 import { ThoughtProcess } from "@/components/ThoughtProcess";
 import { Header } from "@/components/Header";
 import { LandingPage } from "@/components/LandingPage";
@@ -141,17 +142,31 @@ const Index = () => {
       {/* Main content area - full width, chat interface is always accessible */}
       <div className="flex-1 pt-20 relative min-h-0">
         <div className="w-full h-full chat-interface">
-          <Chatbot
-            isShoppingListOpen={isShoppingListOpen}
-            setIsShoppingListOpen={setIsShoppingListOpen}
-            isLeftoversOpen={isLeftoversOpen}
-            setIsLeftoversOpen={setIsLeftoversOpen}
-            setThoughtSteps={setThoughtSteps}
-            session={session}
-            thoughtSteps={thoughtSteps}
-            pendingMessage={pendingAIMessage}
-            onMessageSent={() => setPendingAIMessage(null)}
-          />
+          {isMobile ? (
+            <MobileChatInterface
+              isShoppingListOpen={isShoppingListOpen}
+              setIsShoppingListOpen={setIsShoppingListOpen}
+              isLeftoversOpen={isLeftoversOpen}
+              setIsLeftoversOpen={setIsLeftoversOpen}
+              setThoughtSteps={setThoughtSteps}
+              session={session}
+              thoughtSteps={thoughtSteps}
+              pendingMessage={pendingAIMessage}
+              onMessageSent={() => setPendingAIMessage(null)}
+            />
+          ) : (
+            <Chatbot
+              isShoppingListOpen={isShoppingListOpen}
+              setIsShoppingListOpen={setIsShoppingListOpen}
+              isLeftoversOpen={isLeftoversOpen}
+              setIsLeftoversOpen={setIsLeftoversOpen}
+              setThoughtSteps={setThoughtSteps}
+              session={session}
+              thoughtSteps={thoughtSteps}
+              pendingMessage={pendingAIMessage}
+              onMessageSent={() => setPendingAIMessage(null)}
+            />
+          )}
         </div>
         
         {/* Desktop Sidebar Toggle Button - Fixed positioning for consistent access */}
