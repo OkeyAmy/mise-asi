@@ -216,7 +216,7 @@ const Index = () => {
         {/* Mobile Sidebar Toggle Button */}
         <button
           aria-label={isRightPanelOpen ? "Close thought process sidebar" : "Open thought process sidebar"}
-          aria-expanded={String(isRightPanelOpen)}
+          aria-expanded={isRightPanelOpen}
           aria-controls="mobile-thought-process-sidebar"
           onClick={toggleSidebar}
           className="lg:hidden fixed top-24 right-4 z-toggle bg-white text-gray-700 border border-gray-200 rounded-full shadow-md hover:shadow-lg w-10 h-10 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"

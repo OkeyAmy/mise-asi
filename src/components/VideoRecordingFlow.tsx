@@ -206,17 +206,30 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const handleStopSession = () => {
+    // Immediately clean up and close, regardless of recording state
     if (mediaRecorderRef.current?.state === "recording") {
-      isCancelledRef.current = true; // Set flag to indicate user-initiated stop
+      isCancelledRef.current = true;
       mediaRecorderRef.current.stop();
-    } else {
-      // If not recording (e.g., in confirmation), just clean up and close
+    }
+    
+    // Clean up stream
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
-        setStream(null);
+      setStream(null);
     }
-      onClose();
+    
+    // Clean up timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+    
+    // Reset state
+    setIsRecording(false);
+    setRecordingTime(0);
+    
+    // Close and return to main UI
+    onClose();
   };
 
   // Confirmation Modal
