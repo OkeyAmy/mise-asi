@@ -85,10 +85,10 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({
   };
 
   const handleClose = () => {
+    // Reset both internal and external video flow states
+    setInternalShowVideoFlow(false);
     if (onClose) {
       onClose();
-    } else {
-      setInternalShowVideoFlow(false);
     }
   };
 
