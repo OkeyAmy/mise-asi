@@ -19,6 +19,7 @@ const Index = () => {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(false);
   const [pendingAIMessage, setPendingAIMessage] = useState<string | null>(null);
+  const [showVideoFlow, setShowVideoFlow] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
@@ -95,6 +96,14 @@ const Index = () => {
     setIsRightPanelOpen(prev => !prev);
   };
 
+  const handleVideoTrigger = () => {
+    setShowVideoFlow(true);
+  };
+
+  const handleVideoClose = () => {
+    setShowVideoFlow(false);
+  };
+
   // Show loading state while checking auth
   if (isAuthChecking) {
     return (
@@ -115,10 +124,19 @@ const Index = () => {
   // Show authenticated app
   return (
     <div className="h-screen-safe bg-background text-foreground flex flex-col relative">
-      <Header onShoppingListOpen={() => setIsShoppingListOpen(true)} onLeftoversOpen={() => setIsLeftoversOpen(true)} />
+      <Header 
+        onShoppingListOpen={() => setIsShoppingListOpen(true)} 
+        onLeftoversOpen={() => setIsLeftoversOpen(true)}
+        onVideoTrigger={handleVideoTrigger}
+        isMobile={isMobile}
+      />
       
       {/* Video Recording Trigger */}
-      <VideoTrigger isMobile={isMobile} />
+      <VideoTrigger 
+        isMobile={isMobile} 
+        showVideoFlow={showVideoFlow}
+        onClose={handleVideoClose}
+      />
       
       {/* Main content area - full width, chat interface is always accessible */}
       <div className="flex-1 pt-20 relative min-h-0">
@@ -140,7 +158,7 @@ const Index = () => {
           <button
           ref={toggleButtonRef}
           aria-label={isRightPanelOpen ? "Close thought process sidebar" : "Open thought process sidebar"}
-          aria-expanded={isRightPanelOpen}
+          aria-expanded={isRightPanelOpen ? "true" : "false"}
           aria-controls="thought-process-sidebar"
           onClick={toggleSidebar}
           className="hidden lg:flex fixed top-24 right-4 z-toggle bg-white text-gray-700 border border-gray-200 rounded-full shadow-md hover:shadow-lg w-10 h-10 items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -198,7 +216,7 @@ const Index = () => {
         {/* Mobile Sidebar Toggle Button */}
         <button
           aria-label={isRightPanelOpen ? "Close thought process sidebar" : "Open thought process sidebar"}
-          aria-expanded={isRightPanelOpen}
+          aria-expanded={String(isRightPanelOpen)}
           aria-controls="mobile-thought-process-sidebar"
           onClick={toggleSidebar}
           className="lg:hidden fixed top-24 right-4 z-toggle bg-white text-gray-700 border border-gray-200 rounded-full shadow-md hover:shadow-lg w-10 h-10 flex items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500"

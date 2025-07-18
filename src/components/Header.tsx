@@ -7,13 +7,21 @@ import { supabase } from '@/integrations/supabase/client';
 interface HeaderProps {
   onShoppingListOpen: () => void;
   onLeftoversOpen: () => void;
+  onVideoTrigger: () => void;
+  isMobile?: boolean;
 }
 
-export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => {
+export const Header = ({ onShoppingListOpen, onLeftoversOpen, onVideoTrigger, isMobile = false }: HeaderProps) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleHeaderClick = () => {
+    if (!isMobile) {
+      onVideoTrigger();
+    }
   };
 
   return (
@@ -22,9 +30,10 @@ export const Header = ({ onShoppingListOpen, onLeftoversOpen }: HeaderProps) => 
         <div className="flex flex-col items-start w-full font-inter">
           <div className="flex justify-between items-center w-full">
           <button 
-            onClick={handleLogout}
+            onClick={handleHeaderClick}
             className="text-left hover:opacity-80 transition-opacity duration-200"
-            aria-label="Logout and return to landing page"
+            aria-label={!isMobile ? "Start video recording" : "Mise Home"}
+            disabled={isMobile}
           >
             <Logo className="text-lg" />
           </button>

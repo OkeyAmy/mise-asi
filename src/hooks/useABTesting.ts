@@ -14,6 +14,20 @@ interface ABTestConfig {
     variantB: { line1: string; line2: string; useTypingAnimation: boolean };
   };
   showSocialProof: boolean;
+  videoConfirmation: {
+    control: {
+      title: string;
+      description: string;
+    };
+    variantA: {
+      title: string;
+      description: string;
+    };
+    variantB: {
+      title: string;
+      description: string;
+    };
+  };
 }
 
 interface ABTestResult {
@@ -22,6 +36,10 @@ interface ABTestResult {
   currentCTAText: string;
   currentHeadline: { line1: string; line2: string; useTypingAnimation: boolean };
   showSocialProof: boolean;
+  currentVideoConfirmation: {
+    title: string;
+    description: string;
+  };
   trackEvent: (eventName: string, properties?: Record<string, any>) => void;
   trackImpression: () => void;
   trackConversion: (action: string) => void;
@@ -51,6 +69,20 @@ const AB_TEST_CONFIG: ABTestConfig = {
     }
   },
   showSocialProof: true,
+  videoConfirmation: {
+    control: {
+      title: "Launch AI Video Environment",
+      description: "Your recording will be securely analyzed by AI in real-time to identify items."
+    },
+    variantA: {
+      title: "Ready to Scan Your Kitchen?",
+      description: "Point your camera at your food items for instant, AI-powered inventory."
+    },
+    variantB: {
+      title: "Start Your AI Kitchen Scan",
+      description: "Let Mise identify your ingredients for smarter meal planning."
+    }
+  }
 };
 
 // Google Analytics tracking functions
@@ -86,6 +118,7 @@ const getRandomVariant = (): ABTestVariant => {
 export const useABTesting = (): ABTestResult => {
   const [ctaVariant, setCTAVariant] = useState<ABTestVariant>('control');
   const [headlineVariant, setHeadlineVariant] = useState<ABTestVariant>('control');
+  const [videoVariant, setVideoVariant] = useState<ABTestVariant>('control');
   const [hasTrackedImpression, setHasTrackedImpression] = useState(false);
 
   useEffect(() => {
@@ -118,6 +151,21 @@ export const useABTesting = (): ABTestResult => {
       });
     }
     setHeadlineVariant(storedHeadlineVariant);
+
+    // Get or assign video variant
+    let storedVideoVariant = localStorage.getItem('ab_test_video_variant') as ABTestVariant;
+    if (!storedVideoVariant || !['control', 'variantA', 'variantB'].includes(storedVideoVariant)) {
+      storedVideoVariant = getRandomVariant();
+      localStorage.setItem('ab_test_video_variant', storedVideoVariant);
+      
+      // Track new user assignment
+      trackToGA('ab_test_assigned', {
+        variant: storedVideoVariant,
+        test_type: 'video_confirmation',
+        timestamp: Date.now()
+      });
+    }
+    setVideoVariant(storedVideoVariant);
   }, []);
 
   // Track impression when component mounts (only once per session)
@@ -185,6 +233,7 @@ export const useABTesting = (): ABTestResult => {
     currentCTAText: AB_TEST_CONFIG.ctaText[ctaVariant],
     currentHeadline: AB_TEST_CONFIG.headline[headlineVariant],
     showSocialProof: AB_TEST_CONFIG.showSocialProof,
+    currentVideoConfirmation: AB_TEST_CONFIG.videoConfirmation[videoVariant],
     trackEvent,
     trackImpression,
     trackConversion

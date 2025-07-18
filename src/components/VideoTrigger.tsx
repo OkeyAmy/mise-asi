@@ -5,46 +5,55 @@ import { useToast } from '@/hooks/use-toast';
 
 interface VideoTriggerProps {
   isMobile?: boolean;
+  showVideoFlow?: boolean;
+  onClose?: () => void;
 }
 
-export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false }) => {
-  const [showVideoFlow, setShowVideoFlow] = useState(false);
-  const [swipeStartY, setSwipeStartY] = useState<number | null>(null);
+export const VideoTrigger: React.FC<VideoTriggerProps> = ({ 
+  isMobile = false, 
+  showVideoFlow = false, 
+  onClose 
+}) => {
+  const [internalShowVideoFlow, setInternalShowVideoFlow] = useState(false);
+  const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
   const [isSwipeActive, setIsSwipeActive] = useState(false);
   const { toast } = useToast();
 
-  // Mobile swipe gesture detection
+  // Use external control if provided, otherwise use internal state
+  const videoFlowActive = showVideoFlow || internalShowVideoFlow;
+
+  // Mobile swipe gesture detection - now horizontal
   useEffect(() => {
     if (!isMobile) return;
 
     const handleTouchStart = (e: TouchEvent) => {
       const touch = e.touches[0];
-      const screenHeight = window.innerHeight;
-      const triggerZone = screenHeight * 0.75; // Bottom quarter of screen
+      const screenWidth = window.innerWidth;
+      const triggerZone = screenWidth * 0.1; // Left 10% of screen
       
-      if (touch.clientY > triggerZone) {
-        setSwipeStartY(touch.clientY);
+      if (touch.clientX < triggerZone) {
+        setSwipeStartX(touch.clientX);
         setIsSwipeActive(true);
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isSwipeActive || swipeStartY === null) return;
+      if (!isSwipeActive || swipeStartX === null) return;
       
       const touch = e.touches[0];
-      const swipeDistance = swipeStartY - touch.clientY;
-      const minSwipeDistance = 80;
+      const swipeDistance = touch.clientX - swipeStartX;
+      const minSwipeDistance = 100;
       
       if (swipeDistance > minSwipeDistance) {
-        setShowVideoFlow(true);
+        setInternalShowVideoFlow(true);
         setIsSwipeActive(false);
-        setSwipeStartY(null);
+        setSwipeStartX(null);
       }
     };
 
     const handleTouchEnd = () => {
       setIsSwipeActive(false);
-      setSwipeStartY(null);
+      setSwipeStartX(null);
     };
 
     document.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -56,12 +65,7 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false }) 
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile, swipeStartY, isSwipeActive]);
-
-  // Desktop logo click handler
-  const handleDesktopTrigger = () => {
-    setShowVideoFlow(true);
-  };
+  }, [isMobile, swipeStartX, isSwipeActive]);
 
   const handleVideoRecorded = (videoBlob: Blob) => {
     // Handle the recorded video
@@ -77,23 +81,27 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false }) 
       description: "Processing your video with AI...",
     });
     
-    setShowVideoFlow(false);
+    handleClose();
   };
 
   const handleClose = () => {
-    setShowVideoFlow(false);
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalShowVideoFlow(false);
+    }
   };
 
   // Mobile: Swipe indicator (optional visual feedback)
   if (isMobile && isSwipeActive) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-32 pointer-events-none z-50">
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+      <div className="fixed left-0 top-0 bottom-0 w-32 pointer-events-none z-50">
+        <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
           <div className="bg-white/20 backdrop-blur-md rounded-full px-4 py-2 border border-white/30">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-cyan-300 animate-pulse" />
               <span className="text-white text-sm font-inter tracking-tight">
-                Swipe up for AI Video
+                Swipe right for AI Video
               </span>
             </div>
           </div>
@@ -102,33 +110,12 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({ isMobile = false }) 
     );
   }
 
-  // Desktop: Floating logo trigger
-  if (!isMobile) {
-    return (
-      <>
-        <button
-          onClick={handleDesktopTrigger}
-          className="fixed top-4 left-4 z-40 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:shadow-xl group"
-        >
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-400/20 via-pink-400/20 to-violet-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <Sparkles className="w-6 h-6 text-white group-hover:text-cyan-300 transition-colors duration-300" />
-        </button>
-        
-        {showVideoFlow && (
-          <VideoRecordingFlow
-            onClose={handleClose}
-            onVideoRecorded={handleVideoRecorded}
-          />
-        )}
-      </>
-    );
-  }
-
-  // Mobile: Just return the video flow when triggered
-  return showVideoFlow ? (
+  // Return the video flow when triggered (both mobile and desktop)
+  return videoFlowActive ? (
     <VideoRecordingFlow
       onClose={handleClose}
       onVideoRecorded={handleVideoRecorded}
+      isMobile={isMobile}
     />
   ) : null;
 };
