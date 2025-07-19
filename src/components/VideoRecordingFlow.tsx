@@ -31,10 +31,11 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const [isMicOn, setIsMicOn] = useState(true);
   const [isAiMuted, setIsAiMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null); // Restored for stable stream reference
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isSwitchingCameraRef = useRef(false); // Flag to manage switching state
+  const isSwitchingCameraRef = useRef(false);
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
 
@@ -44,6 +45,15 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
+
+  useEffect(() => {
+    // Failsafe cleanup on unmount
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   // Effect for recording timer
   useEffect(() => {
@@ -69,6 +79,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
         audio: true
       });
 
+      streamRef.current = mediaStream; // Use ref
       setStream(mediaStream);
       setIsCameraOn(true);
       setIsMicOn(true);
@@ -78,7 +89,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       });
       
       mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = []; // Start with fresh chunks for a new recording
+      chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -86,11 +97,10 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
         }
       };
 
-      // Decoupled onstop: Only handles the final data blob.
       mediaRecorder.onstop = () => {
         if (isSwitchingCameraRef.current) {
-          isSwitchingCameraRef.current = false; // Reset flag
-          return; // Bail out of cleanup during a camera switch
+          isSwitchingCameraRef.current = false;
+          return;
         }
         
         const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
@@ -98,9 +108,9 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
           onVideoRecorded(videoBlob);
         }
         
-        // Full cleanup and close, now only happens on a true stop
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+        // Full cleanup, using the ref
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
         }
         setStream(null);
         setIsRecording(false);
@@ -132,8 +142,8 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       mediaRecorderRef.current.stop();
     }
     
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
     }
 
     // Wait a moment for resources to release
@@ -150,8 +160,8 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       mediaRecorderRef.current.stop(); // Triggers the onstop event for full cleanup
     } else {
       // If not recording, just clean up and close immediately
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
       onClose();
     }
