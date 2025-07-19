@@ -8,6 +8,7 @@ interface VideoControlsProps {
   isCameraOn: boolean;
   isMicOn: boolean;
   isAiMuted: boolean;
+  facingMode?: 'environment' | 'user';
   onToggleCamera: () => void;
   onToggleMic: () => void;
   onSwitchCamera: () => void;
@@ -23,6 +24,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   isCameraOn,
   isMicOn,
   isAiMuted,
+  facingMode = 'environment',
   onToggleCamera,
   onToggleMic,
   onSwitchCamera,
@@ -67,10 +69,20 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
           variants={buttonVariants}
           whileTap="tap"
           onClick={onSwitchCamera}
-          className={cn(commonButtonClass, "bg-white/10 hover:bg-white/20 text-white")}
+          className={cn(commonButtonClass, "bg-black/30 hover:bg-black/50 text-white border border-white/20")}
           aria-label="Switch camera"
         >
-          <RefreshCw className="w-4 h-4" />
+          <motion.div
+            animate={{ 
+              rotateY: facingMode === 'user' ? 180 : 0 
+            }}
+            transition={{ 
+              duration: 0.6,
+              ease: "easeInOut"
+            }}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </motion.div>
         </motion.button>
       ) : (
         // Desktop: Mute AI Voice

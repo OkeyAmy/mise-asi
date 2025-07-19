@@ -109,18 +109,63 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 
   const switchCamera = async () => {
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-    setFacingMode(newFacingMode);
-
+    
     if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
       try {
-        await videoTrack.applyConstraints({
-          facingMode: { ideal: newFacingMode }
+        // Stop the current stream
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Get new stream with switched camera
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: { ideal: newFacingMode }
+          },
+          audio: true
         });
+
+        // Update states and video element
+        setStream(newStream);
+        setFacingMode(newFacingMode);
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream;
+        }
+
+        // Update MediaRecorder with new stream
+        if (mediaRecorderRef.current && isRecording) {
+          mediaRecorderRef.current.stop();
+          
+          const mediaRecorder = new MediaRecorder(newStream, {
+            mimeType: 'video/webm;codecs=vp9'
+          });
+          
+          mediaRecorderRef.current = mediaRecorder;
+          
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              chunksRef.current.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+            if (videoBlob.size > 0) {
+              onVideoRecorded(videoBlob);
+            }
+          };
+
+          mediaRecorder.start();
+        }
+
       } catch (error) {
-        console.error("Failed to switch camera using applyConstraints. Falling back.", error);
-        // Fallback: stop old stream and start a new one
-        await startRecording();
+        console.error('Error switching camera:', error);
+        toast({
+          title: "Camera Switch Failed",
+          description: "Could not switch between cameras.",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -292,6 +337,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
             isCameraOn={isCameraOn}
             isMicOn={isMicOn}
             isAiMuted={isAiMuted}
+            facingMode={facingMode}
             onToggleCamera={handleToggleCamera}
             onToggleMic={handleToggleMic}
             onSwitchCamera={switchCamera}
