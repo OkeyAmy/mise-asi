@@ -20,6 +20,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   isMobile = false,
 }) => {
   const [stage, setStage] = useState<'confirmation' | 'recording'>('confirmation');
+  const [isRecording, setIsRecording] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -46,11 +47,9 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const startSession = async (currentFacingMode: 'environment' | 'user') => {
-    // Clear any previous chunks ONLY when starting a brand new session from confirmation
-    if (stage === 'confirmation') {
-      chunksRef.current = [];
-    }
-
+    // Stop any existing stream before starting a new one
+    stopMediaTracks(stream);
+    
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
@@ -63,29 +62,23 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 
       setStream(mediaStream);
       setStage('recording');
+      setIsRecording(true);
       setIsCameraOn(true);
       setIsMicOn(true);
 
       const recorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp9' });
       mediaRecorderRef.current = recorder;
+      chunksRef.current = [];
       
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
+      recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
       recorder.onstop = () => {
         const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-        if (videoBlob.size > 0) {
-          onVideoRecorded(videoBlob);
-        }
+        if (videoBlob.size > 0) onVideoRecorded(videoBlob);
       };
-      
       recorder.start();
     } catch (error) {
-      console.error('Error starting session:', error);
-      toast({ title: "Camera Access Denied", description: "Please allow camera access to record.", variant: "destructive" });
+      console.error('Error starting recording:', error);
+      toast({ title: "Camera Access Denied", description: "Please allow camera access in your browser settings.", variant: "destructive" });
       onClose();
     }
   };
@@ -101,16 +94,22 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   
   const handleSwitchCamera = async () => {
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-    
-    // Stop the current recorder and stream
-    if (mediaRecorderRef.current?.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
-    stopMediaTracks(stream);
-
-    // Update the facing mode and start a new session with the new camera
     setFacingMode(newFacingMode);
-    await startSession(newFacingMode);
+
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return;
+      
+      try {
+        await videoTrack.applyConstraints({
+          facingMode: { ideal: newFacingMode },
+        });
+      } catch (err) {
+        console.error("Error switching camera with applyConstraints, falling back.", err);
+        // Fallback to restarting the stream with the new camera
+        await startSession(newFacingMode);
+      }
+    }
   };
 
   const handleToggleCamera = () => {
