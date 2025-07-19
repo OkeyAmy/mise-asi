@@ -111,75 +111,109 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     console.log('Switching camera from', facingMode, 'to', newFacingMode);
     
-    if (stream) {
-      try {
-        // Stop the current stream
-        console.log('Stopping current stream tracks');
-        stream.getTracks().forEach(track => {
-          console.log('Stopping track:', track.kind, track.label);
-          track.stop();
+    if (!stream) {
+      console.log('No stream available to switch');
+      return;
+    }
+
+    try {
+      // Get new stream BEFORE stopping the old one to avoid black screen
+      console.log('Requesting new stream with facingMode:', newFacingMode);
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: { ideal: newFacingMode }
+        },
+        audio: true
+      });
+
+      console.log('New stream obtained:', newStream.getVideoTracks()[0]?.label);
+      
+      // Now stop the old stream
+      console.log('Stopping old stream tracks');
+      stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      
+      // Update states and video element
+      setStream(newStream);
+      setFacingMode(newFacingMode);
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+        console.log('Video element updated with new stream');
+        // Ensure video continues playing
+        try {
+          await videoRef.current.play();
+        } catch (playError) {
+          console.log('Video play error (might be normal):', playError);
+        }
+      }
+
+      // Update MediaRecorder with new stream if recording
+      if (mediaRecorderRef.current && isRecording) {
+        console.log('Updating MediaRecorder with new stream');
+        
+        // Stop old recorder
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+        
+        // Wait a bit for the old recorder to stop
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const mediaRecorder = new MediaRecorder(newStream, {
+          mimeType: 'video/webm;codecs=vp9'
         });
         
-        // Get new stream with switched camera
-        console.log('Requesting new stream with facingMode:', newFacingMode);
-        const newStream = await navigator.mediaDevices.getUserMedia({
+        mediaRecorderRef.current = mediaRecorder;
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+          if (videoBlob.size > 0) {
+            onVideoRecorded(videoBlob);
+          }
+        };
+
+        mediaRecorder.start();
+        console.log('MediaRecorder restarted with new stream');
+      }
+
+      console.log('Camera switch completed successfully');
+
+    } catch (error) {
+      console.error('Error switching camera:', error);
+      toast({
+        title: "Camera Switch Failed", 
+        description: `Could not switch to ${newFacingMode === 'user' ? 'front' : 'back'} camera: ${error.message}`,
+        variant: "destructive"
+      });
+      
+      // Don't leave the user with a black screen - try to restart the original camera
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 1280 },
             height: { ideal: 720 },
-            facingMode: { ideal: newFacingMode }
+            facingMode: { ideal: facingMode }
           },
           audio: true
         });
-
-        console.log('New stream obtained:', newStream.getVideoTracks()[0]?.label);
-        
-        // Update states and video element
-        setStream(newStream);
-        setFacingMode(newFacingMode);
-        
+        setStream(fallbackStream);
         if (videoRef.current) {
-          videoRef.current.srcObject = newStream;
-          console.log('Video element updated with new stream');
+          videoRef.current.srcObject = fallbackStream;
         }
-
-        // Update MediaRecorder with new stream if recording
-        if (mediaRecorderRef.current && isRecording) {
-          console.log('Updating MediaRecorder with new stream');
-          mediaRecorderRef.current.stop();
-          
-          const mediaRecorder = new MediaRecorder(newStream, {
-            mimeType: 'video/webm;codecs=vp9'
-          });
-          
-          mediaRecorderRef.current = mediaRecorder;
-          
-          mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) {
-              chunksRef.current.push(event.data);
-            }
-          };
-
-          mediaRecorder.onstop = () => {
-            const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-            if (videoBlob.size > 0) {
-              onVideoRecorded(videoBlob);
-            }
-          };
-
-          mediaRecorder.start();
-          console.log('MediaRecorder restarted with new stream');
-        }
-
-      } catch (error) {
-        console.error('Error switching camera:', error);
-        toast({
-          title: "Camera Switch Failed",
-          description: "Could not switch between cameras. " + error.message,
-          variant: "destructive"
-        });
+      } catch (fallbackError) {
+        console.error('Fallback camera failed:', fallbackError);
       }
-    } else {
-      console.log('No stream available to switch');
     }
   };
 
