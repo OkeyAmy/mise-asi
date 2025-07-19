@@ -14,6 +14,7 @@ import { Button } from "./ui/button";
 import { ShoppingCart, Package, Utensils, LogOut, Menu, Plus, Send, ChevronDown, MessageSquare, RotateCcw } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import FeedbackWidget from "./FeedbackWidget"; // Correct import for FeedbackWidget
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,12 @@ interface MobileChatInputProps {
   isThinking: boolean;
   onReset: () => void;
   onFeedback: () => void;
+}
+
+interface ChatMessageListProps {
+  messages: Message[];
+  isThinking: boolean;
+  setThoughtSteps: (steps: ThoughtStep[] | ((prev: ThoughtStep[]) => ThoughtStep[])) => void; // Add missing prop
 }
 
 const MobileChatInput = ({ inputValue, setInputValue, handleSendMessage, isThinking, onReset, onFeedback }: MobileChatInputProps) => {
@@ -152,6 +159,7 @@ export const MobileChatInterface = ({
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false); // Add state for FeedbackWidget
   const navigate = useNavigate();
 
   const {
@@ -302,8 +310,7 @@ export const MobileChatInterface = ({
   };
 
   const handleFeedback = () => {
-    // Add feedback functionality here
-    console.log('Feedback requested');
+    setIsFeedbackOpen(true); // Open the feedback dialog
   };
 
   return (
@@ -456,6 +463,7 @@ export const MobileChatInterface = ({
         onClose={() => setIsAmazonProductViewOpen(false)}
         productName=""
       />
+      <FeedbackWidget open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen} />
     </div>
   );
 };
