@@ -34,6 +34,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSwitchingCameraRef = useRef(false); // Flag to manage switching state
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
 
@@ -87,10 +88,23 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 
       // Decoupled onstop: Only handles the final data blob.
       mediaRecorder.onstop = () => {
+        if (isSwitchingCameraRef.current) {
+          isSwitchingCameraRef.current = false; // Reset flag
+          return; // Bail out of cleanup during a camera switch
+        }
+        
         const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
         if (videoBlob.size > 0) {
           onVideoRecorded(videoBlob);
         }
+        
+        // Full cleanup and close, now only happens on a true stop
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        setStream(null);
+        setIsRecording(false);
+        onClose();
       };
 
       mediaRecorder.start();
@@ -110,31 +124,37 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const switchCamera = async () => {
-    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    if (!isRecording) return;
+
+    isSwitchingCameraRef.current = true;
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
     
-    // Stop the current stream to release the camera
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
 
-    // Update the facing mode and restart the stream with the new mode
+    // Wait a moment for resources to release
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
     await startRecording(newFacingMode);
   };
 
   const handleStopSession = () => {
-    // Centralized and explicit cleanup
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop(); // This will trigger the simple onstop handler
+    // This is now the single point of entry for stopping the session.
+    if (mediaRecorderRef.current?.state === "recording") {
+      mediaRecorderRef.current.stop(); // Triggers the onstop event for full cleanup
+    } else {
+      // If not recording, just clean up and close immediately
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      onClose();
     }
-    
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop()); // Explicitly stop the camera
-    }
-
-    setStream(null);
-    setIsRecording(false);
-    onClose(); // Close the UI
   };
 
   const handleToggleCamera = () => {
