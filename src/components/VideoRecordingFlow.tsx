@@ -109,13 +109,19 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 
   const switchCamera = async () => {
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    console.log('Switching camera from', facingMode, 'to', newFacingMode);
     
     if (stream) {
       try {
         // Stop the current stream
-        stream.getTracks().forEach(track => track.stop());
+        console.log('Stopping current stream tracks');
+        stream.getTracks().forEach(track => {
+          console.log('Stopping track:', track.kind, track.label);
+          track.stop();
+        });
         
         // Get new stream with switched camera
+        console.log('Requesting new stream with facingMode:', newFacingMode);
         const newStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 1280 },
@@ -125,16 +131,20 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
           audio: true
         });
 
+        console.log('New stream obtained:', newStream.getVideoTracks()[0]?.label);
+        
         // Update states and video element
         setStream(newStream);
         setFacingMode(newFacingMode);
         
         if (videoRef.current) {
           videoRef.current.srcObject = newStream;
+          console.log('Video element updated with new stream');
         }
 
-        // Update MediaRecorder with new stream
+        // Update MediaRecorder with new stream if recording
         if (mediaRecorderRef.current && isRecording) {
+          console.log('Updating MediaRecorder with new stream');
           mediaRecorderRef.current.stop();
           
           const mediaRecorder = new MediaRecorder(newStream, {
@@ -157,16 +167,19 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
           };
 
           mediaRecorder.start();
+          console.log('MediaRecorder restarted with new stream');
         }
 
       } catch (error) {
         console.error('Error switching camera:', error);
         toast({
           title: "Camera Switch Failed",
-          description: "Could not switch between cameras.",
+          description: "Could not switch between cameras. " + error.message,
           variant: "destructive"
         });
       }
+    } else {
+      console.log('No stream available to switch');
     }
   };
 
