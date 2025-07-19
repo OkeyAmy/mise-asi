@@ -20,7 +20,7 @@ export const ConversationOverlay: React.FC<ConversationOverlayProps> = ({
 }) => {
   return (
     <div 
-      className="absolute inset-x-4 top-20 bottom-32 pointer-events-none flex flex-col justify-end"
+      className="absolute inset-x-4 top-6 pointer-events-none flex flex-col justify-start"
       aria-live="polite"
       role="log"
     >

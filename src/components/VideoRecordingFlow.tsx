@@ -6,6 +6,7 @@ import { useABTesting } from '@/hooks/useABTesting';
 import { ConversationOverlay } from './ConversationOverlay';
 import { SimulatedMessage } from '@/data/mockConversation';
 import { motion } from 'framer-motion';
+import { VideoControls } from './VideoControls';
 
 interface VideoRecordingFlowProps {
   onClose: () => void;
@@ -26,11 +27,13 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const [currentUserMessage, setCurrentUserMessage] = useState<SimulatedMessage | null>(null);
   const [currentAiMessage, setCurrentAiMessage] = useState<SimulatedMessage | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isMicOn, setIsMicOn] = useState(true);
+  const [isAiMuted, setIsAiMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const isCancelledRef = useRef(false);
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
 
@@ -58,6 +61,24 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       }
     };
   }, [isRecording]);
+
+  const handleToggleCamera = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsCameraOn(prev => !prev);
+    }
+  };
+
+  const handleToggleMic = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      setIsMicOn(prev => !prev);
+    }
+  };
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -115,32 +136,25 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        const wasCancelled = isCancelledRef.current;
-        isCancelledRef.current = false; // Reset immediately
-
-        if (wasCancelled) {
-          console.log("Recording cancelled.");
-          chunksRef.current = [];
-          // Centralized cleanup only on explicit cancellation or component unmount
-          if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            setStream(null);
-          }
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-          setIsRecording(false);
-          onClose(); // Call close here after full cleanup
-        } else {
-        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-        onVideoRecorded(videoBlob);
-          // For successful recordings, do NOT stop stream or close UI. Video should persist.
-          // Cleanup will happen when the component unmounts or handleClose is explicitly called.
+        // This now handles the final video processing and UI teardown.
+        if (chunksRef.current.length > 0) {
+          const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+          onVideoRecorded(videoBlob);
         }
+
+        // Full cleanup and close
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          setStream(null);
+        }
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        setIsRecording(false);
+        onClose();
       };
 
-      isCancelledRef.current = false; // Reset on start
       mediaRecorder.start();
       setIsRecording(true);
       setStage('recording');
@@ -206,30 +220,17 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const handleStopSession = () => {
-    // Immediately clean up and close, regardless of recording state
+    // This is now the single point of entry for stopping the session.
     if (mediaRecorderRef.current?.state === "recording") {
-      isCancelledRef.current = true;
-      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stop(); // Triggers the onstop event
+    } else {
+      // If not recording, just clean up and close immediately
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      onClose();
     }
-    
-    // Clean up stream
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    
-    // Clean up timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    
-    // Reset state
-    setIsRecording(false);
-    setRecordingTime(0);
-    
-    // Close and return to main UI
-    onClose();
   };
 
   // Confirmation Modal
@@ -328,7 +329,17 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 
         {/* --- Bottom Controls --- */}
         <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-4 pointer-events-auto">
-          
+          <VideoControls 
+            isMobile={isMobile}
+            isCameraOn={isCameraOn}
+            isMicOn={isMicOn}
+            isAiMuted={isAiMuted}
+            onToggleCamera={handleToggleCamera}
+            onToggleMic={handleToggleMic}
+            onSwitchCamera={switchCamera}
+            onToggleAiMuted={() => setIsAiMuted(prev => !prev)}
+          />
+
           {/* Bottom input bar */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

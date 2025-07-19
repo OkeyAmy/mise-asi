@@ -76,19 +76,16 @@ export const VideoTrigger: React.FC<VideoTriggerProps> = ({
     // 2. Create a new AI session
     // 3. Process the video with AI
     
-    toast({
-      title: "Video Recorded",
-      description: "Processing your video with AI...",
-    });
+    // Removed toast message to eliminate processing step perception.
     
-    handleClose();
+    setInternalShowVideoFlow(false);
   };
 
   const handleClose = () => {
-    // Reset both internal and external video flow states
-    setInternalShowVideoFlow(false);
     if (onClose) {
       onClose();
+    } else {
+      setInternalShowVideoFlow(false);
     }
   };
 
