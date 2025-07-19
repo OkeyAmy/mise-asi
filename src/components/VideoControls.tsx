@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Video, VideoOff, Mic, MicOff, Volume2, VolumeX, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ interface VideoControlsProps {
   onToggleMic: () => void;
   onSwitchCamera: () => void;
   onToggleAiMuted: () => void;
+  isSwitchingCamera: boolean;
 }
 
 const buttonVariants = {
@@ -29,6 +30,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   onToggleMic,
   onSwitchCamera,
   onToggleAiMuted,
+  isSwitchingCamera,
 }) => {
   const commonButtonClass = "p-2.5 rounded-full transition-colors duration-200";
   const activeButtonClass = "bg-white/90 text-black";
@@ -69,20 +71,15 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
           variants={buttonVariants}
           whileTap="tap"
           onClick={onSwitchCamera}
-          className={cn(commonButtonClass, "bg-black/30 hover:bg-black/50 text-white border border-white/20")}
+          disabled={isSwitchingCamera}
+          className={cn(commonButtonClass, "bg-black/30 hover:bg-black/50 text-white border border-white/20", { "opacity-50 cursor-not-allowed": isSwitchingCamera })}
           aria-label="Switch camera"
         >
-          <motion.div
-            animate={{ 
-              rotateY: facingMode === 'user' ? 180 : 0 
-            }}
-            transition={{ 
-              duration: 0.6,
-              ease: "easeInOut"
-            }}
-          >
+          {isSwitchingCamera ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
             <RefreshCw className="w-4 h-4" />
-          </motion.div>
+          )}
         </motion.button>
       ) : (
         // Desktop: Mute AI Voice

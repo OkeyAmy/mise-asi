@@ -36,6 +36,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   // Effect to attach the stream to the video element
   useEffect(() => {
@@ -57,13 +58,13 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
     };
   }, [isRecording]);
 
-  const startRecording = async () => {
+  const startRecording = async (currentFacingMode: 'environment' | 'user') => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: { ideal: facingMode }
+          facingMode: { ideal: currentFacingMode }
         },
         audio: true
       });
@@ -108,17 +109,19 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const switchCamera = async () => {
+    if (isSwitchingCamera) return;
+
+    setIsSwitchingCamera(true);
+
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-    console.log('Switching camera from', facingMode, 'to', newFacingMode);
-    
-    if (!stream) {
-      console.log('No stream available to switch');
-      return;
-    }
 
     try {
-      // Get new stream BEFORE stopping the old one to avoid black screen
-      console.log('Requesting new stream with facingMode:', newFacingMode);
+      // Stop the current stream completely
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      
+      // Get the new stream
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 1280 },
@@ -128,92 +131,37 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
         audio: true
       });
 
-      console.log('New stream obtained:', newStream.getVideoTracks()[0]?.label);
-      
-      // Now stop the old stream
-      console.log('Stopping old stream tracks');
-      stream.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind, track.label);
-        track.stop();
-      });
-      
-      // Update states and video element
       setStream(newStream);
       setFacingMode(newFacingMode);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-        console.log('Video element updated with new stream');
-        // Ensure video continues playing
-        try {
-          await videoRef.current.play();
-        } catch (playError) {
-          console.log('Video play error (might be normal):', playError);
-        }
-      }
 
-      // Update MediaRecorder with new stream if recording
-      if (mediaRecorderRef.current && isRecording) {
-        console.log('Updating MediaRecorder with new stream');
+      // If recording, seamlessly continue with the new stream
+      if (isRecording && mediaRecorderRef.current) {
+        const recorder = new MediaRecorder(newStream, { mimeType: 'video/webm;codecs=vp9' });
         
-        // Stop old recorder
-        if (mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-        }
-        
-        // Wait a bit for the old recorder to stop
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const mediaRecorder = new MediaRecorder(newStream, {
-          mimeType: 'video/webm;codecs=vp9'
-        });
-        
-        mediaRecorderRef.current = mediaRecorder;
-        
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            chunksRef.current.push(event.data);
-          }
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) chunksRef.current.push(event.data);
         };
 
-        mediaRecorder.onstop = () => {
+        recorder.onstop = () => {
           const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-          if (videoBlob.size > 0) {
-            onVideoRecorded(videoBlob);
-          }
+          if (videoBlob.size > 0) onVideoRecorded(videoBlob);
         };
-
-        mediaRecorder.start();
-        console.log('MediaRecorder restarted with new stream');
+        
+        mediaRecorderRef.current = recorder;
+        recorder.start();
       }
-
-      console.log('Camera switch completed successfully');
 
     } catch (error) {
       console.error('Error switching camera:', error);
       toast({
-        title: "Camera Switch Failed", 
-        description: `Could not switch to ${newFacingMode === 'user' ? 'front' : 'back'} camera: ${error.message}`,
-        variant: "destructive"
+        title: "Camera Switch Failed",
+        description: `Could not switch camera. Please try again.`,
+        variant: "destructive",
       });
-      
-      // Don't leave the user with a black screen - try to restart the original camera
-      try {
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: { ideal: facingMode }
-          },
-          audio: true
-        });
-        setStream(fallbackStream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = fallbackStream;
-        }
-      } catch (fallbackError) {
-        console.error('Fallback camera failed:', fallbackError);
-      }
+      // Try to revert to the old facing mode if switching fails
+      setFacingMode(facingMode);
+    } finally {
+      setIsSwitchingCamera(false);
     }
   };
 
@@ -337,7 +285,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
               className="flex flex-col lg:flex-row gap-3 lg:gap-4"
             >
               <Button
-                onClick={startRecording}
+                onClick={() => startRecording(facingMode)}
                 className="w-full lg:flex-1 bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50 rounded-full py-3 lg:py-4 font-inter tracking-tight transition-all duration-200 hover:scale-105 hover:shadow-lg relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -389,6 +337,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
             onToggleMic={handleToggleMic}
             onSwitchCamera={switchCamera}
             onToggleAiMuted={() => setIsAiMuted(prev => !prev)}
+            isSwitchingCamera={isSwitchingCamera}
           />
 
           {/* Bottom input bar */}
