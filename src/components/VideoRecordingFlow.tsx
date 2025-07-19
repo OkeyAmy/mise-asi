@@ -36,7 +36,6 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
-  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   // Effect to attach the stream to the video element
   useEffect(() => {
@@ -58,13 +57,13 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
     };
   }, [isRecording]);
 
-  const startRecording = async (currentFacingMode: 'environment' | 'user') => {
+  const startRecording = async () => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: { ideal: currentFacingMode }
+          facingMode: { ideal: facingMode }
         },
         audio: true
       });
@@ -109,71 +108,51 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const switchCamera = async () => {
-    if (isSwitchingCamera) return;
+    if (!stream) {
+      console.warn("Cannot switch camera, no active stream.");
+      return;
+    }
 
-    setIsSwitchingCamera(true);
-
+    const videoTrack = stream.getVideoTracks()[0];
+    if (!videoTrack) {
+      console.warn("No video track on the current stream to switch.");
+      return;
+    }
+    
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-
+    
     try {
-      // Stop the current stream completely
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      
-      // Get the new stream
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: { ideal: newFacingMode }
-        },
-        audio: true
+      // Use applyConstraints to dynamically switch the camera on the existing track.
+      // This is far more reliable than stopping and starting new streams.
+      await videoTrack.applyConstraints({
+        facingMode: { exact: newFacingMode }
       });
-
-      setStream(newStream);
+      
+      // If successful, update our state to reflect the change.
       setFacingMode(newFacingMode);
-
-      // If recording, seamlessly continue with the new stream
-      if (isRecording && mediaRecorderRef.current) {
-        const recorder = new MediaRecorder(newStream, { mimeType: 'video/webm;codecs=vp9' });
-        
-        recorder.ondataavailable = (event) => {
-          if (event.data.size > 0) chunksRef.current.push(event.data);
-        };
-
-        recorder.onstop = () => {
-          const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-          if (videoBlob.size > 0) onVideoRecorded(videoBlob);
-        };
-        
-        mediaRecorderRef.current = recorder;
-        recorder.start();
-      }
-
     } catch (error) {
-      console.error('Error switching camera:', error);
+      console.error("Error switching camera with applyConstraints:", error);
       toast({
         title: "Camera Switch Failed",
-        description: `Could not switch camera. Please try again.`,
+        description: "Your device may not support switching cameras while recording.",
         variant: "destructive",
       });
-      // Try to revert to the old facing mode if switching fails
-      setFacingMode(facingMode);
-    } finally {
-      setIsSwitchingCamera(false);
     }
   };
-
+  
   const handleStopSession = () => {
+    // Stop the recorder if it's running. This will trigger the 'onstop' event.
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
     
+    // Explicitly stop all media tracks to release the camera and mic.
+    // This is the crucial step to ensure the camera turns off.
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
     }
 
+    // Clean up state and close the component UI.
     setStream(null);
     setIsRecording(false);
     onClose();
@@ -285,7 +264,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
               className="flex flex-col lg:flex-row gap-3 lg:gap-4"
             >
               <Button
-                onClick={() => startRecording(facingMode)}
+                onClick={startRecording}
                 className="w-full lg:flex-1 bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50 rounded-full py-3 lg:py-4 font-inter tracking-tight transition-all duration-200 hover:scale-105 hover:shadow-lg relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -337,7 +316,6 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
             onToggleMic={handleToggleMic}
             onSwitchCamera={switchCamera}
             onToggleAiMuted={() => setIsAiMuted(prev => !prev)}
-            isSwitchingCamera={isSwitchingCamera}
           />
 
           {/* Bottom input bar */}
