@@ -37,77 +37,25 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
 
+  // Effect to attach the stream to the video element
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
 
+  // Effect for recording timer
   useEffect(() => {
-    // This effect is now for managing the recording timer only.
-    // The conversation simulation logic has been moved to handleSendMessage.
-    if (isRecording && timerRef.current === null) {
-      timerRef.current = setInterval(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isRecording) {
+      timer = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-    } else if (!isRecording && timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
     }
-
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timer) clearInterval(timer);
     };
   }, [isRecording]);
-
-  const handleToggleCamera = () => {
-    if (stream) {
-      stream.getVideoTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsCameraOn(prev => !prev);
-    }
-  };
-
-  const handleToggleMic = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsMicOn(prev => !prev);
-    }
-  };
-
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
-    const newUserMessage: SimulatedMessage = {
-      id: Date.now(),
-      sender: 'user',
-      text: inputValue,
-    };
-    setCurrentUserMessage(newUserMessage);
-    setCurrentAiMessage(null); // Clear previous AI response
-    setInputValue('');
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: SimulatedMessage = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: "That's a great question! Let me look into that for you.",
-      };
-      setCurrentAiMessage(aiResponse);
-    }, 1200);
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const startRecording = async () => {
     try {
@@ -121,6 +69,8 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       });
 
       setStream(mediaStream);
+      setIsCameraOn(true);
+      setIsMicOn(true);
 
       const mediaRecorder = new MediaRecorder(mediaStream, {
         mimeType: 'video/webm;codecs=vp9'
@@ -136,23 +86,10 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        // This now handles the final video processing and UI teardown.
-        if (chunksRef.current.length > 0) {
-          const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+        if (videoBlob.size > 0) {
           onVideoRecorded(videoBlob);
         }
-
-        // Full cleanup and close
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setStream(null);
-        }
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        setIsRecording(false);
-        onClose();
       };
 
       mediaRecorder.start();
@@ -171,66 +108,87 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
   };
 
   const switchCamera = async () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-
     const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newFacingMode);
 
-    try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      try {
+        await videoTrack.applyConstraints({
           facingMode: { ideal: newFacingMode }
-        },
-        audio: true
-      });
-
-      setStream(newStream);
-
-      if (isRecording && mediaRecorderRef.current) {
-        // Re-create MediaRecorder for the new stream
-        const newMediaRecorder = new MediaRecorder(newStream, {
-          mimeType: 'video/webm;codecs=vp9'
         });
-
-        newMediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            chunksRef.current.push(event.data);
-    }
-  };
-
-        // Preserve the original onstop handler for the new recorder
-        newMediaRecorder.onstop = mediaRecorderRef.current.onstop;
-        
-        mediaRecorderRef.current = newMediaRecorder;
-        mediaRecorderRef.current.start();
+      } catch (error) {
+        console.error("Failed to switch camera using applyConstraints. Falling back.", error);
+        // Fallback: stop old stream and start a new one
+        await startRecording();
       }
-
-    } catch (error) {
-      console.error("Error switching camera:", error);
-      toast({
-        title: "Camera Error",
-        description: "Could not switch camera. It might be busy or not available.",
-        variant: "destructive",
-      });
     }
   };
 
   const handleStopSession = () => {
-    // This is now the single point of entry for stopping the session.
-    if (mediaRecorderRef.current?.state === "recording") {
-      mediaRecorderRef.current.stop(); // Triggers the onstop event
-    } else {
-      // If not recording, just clean up and close immediately
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
-      }
-      onClose();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
     }
+    
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+
+    setStream(null);
+    setIsRecording(false);
+    onClose();
+  };
+
+  const handleToggleCamera = () => {
+    if (stream) {
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        videoTracks.forEach(track => {
+          track.enabled = !track.enabled;
+        });
+        setIsCameraOn(prev => !prev);
+      }
+    }
+  };
+
+  const handleToggleMic = () => {
+    if (stream) {
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length > 0) {
+        audioTracks.forEach(track => {
+          track.enabled = !track.enabled;
+        });
+        setIsMicOn(prev => !prev);
+      }
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+
+    const newUserMessage: SimulatedMessage = {
+      id: Date.now(),
+      sender: 'user',
+      text: inputValue,
+    };
+    setCurrentUserMessage(newUserMessage);
+    setCurrentAiMessage(null);
+    setInputValue('');
+
+    setTimeout(() => {
+      const aiResponse: SimulatedMessage = {
+        id: Date.now() + 1,
+        sender: 'ai',
+        text: "That's a great question! Let me look into that for you.",
+      };
+      setCurrentAiMessage(aiResponse);
+    }, 1200);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Confirmation Modal
