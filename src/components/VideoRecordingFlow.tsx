@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Play, Sparkles, RefreshCw, Video, Volume2, Mic } from 'lucide-react';
+import { X, Play, RefreshCw, Video, Volume2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useABTesting } from '@/hooks/useABTesting';
@@ -21,141 +21,92 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
 }) => {
   const [stage, setStage] = useState<'confirmation' | 'recording'>('confirmation');
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
-  const [currentUserMessage, setCurrentUserMessage] = useState<SimulatedMessage | null>(null);
-  const [currentAiMessage, setCurrentAiMessage] = useState<SimulatedMessage | null>(null);
-  const [inputValue, setInputValue] = useState('');
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [isMicOn, setIsMicOn] = useState(true);
   const [isAiMuted, setIsAiMuted] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [currentUserMessage, setCurrentUserMessage] = useState<SimulatedMessage | null>(null);
+  const [currentAiMessage, setCurrentAiMessage] = useState<SimulatedMessage | null>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const { currentVideoConfirmation } = useABTesting();
 
-  // Effect to attach the stream to the video element
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  // Effect for recording timer
-  useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    if (isRecording) {
-      timer = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isRecording]);
+  const stopMediaTracks = (mediaStream: MediaStream | null) => {
+    mediaStream?.getTracks().forEach(track => track.stop());
+  };
 
-  const startRecording = async () => {
+  const startSession = async (currentFacingMode: 'environment' | 'user') => {
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: { ideal: facingMode }
+          facingMode: { ideal: currentFacingMode }
         },
         audio: true
       });
 
       setStream(mediaStream);
+      setStage('recording');
+      setIsRecording(true);
       setIsCameraOn(true);
       setIsMicOn(true);
 
-      const mediaRecorder = new MediaRecorder(mediaStream, {
-        mimeType: 'video/webm;codecs=vp9'
-      });
-      
-      mediaRecorderRef.current = mediaRecorder;
+      const recorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp9' });
+      mediaRecorderRef.current = recorder;
       chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
+      
+      recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
+      recorder.onstop = () => {
         const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-        if (videoBlob.size > 0) {
-          onVideoRecorded(videoBlob);
-        }
+        if (videoBlob.size > 0) onVideoRecorded(videoBlob);
       };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setStage('recording');
-      setRecordingTime(0);
-
+      recorder.start();
     } catch (error) {
       console.error('Error starting recording:', error);
-      toast({
-        title: "Camera Access Denied",
-        description: "Please allow camera access to record video.",
-        variant: "destructive"
-      });
+      toast({ title: "Camera Access Denied", variant: "destructive" });
+      onClose();
     }
   };
 
-  const switchCamera = async () => {
-    if (!stream) {
-      console.warn("Cannot switch camera, no active stream.");
-      return;
-    }
-
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) {
-      console.warn("No video track on the current stream to switch.");
-      return;
-    }
-    
-    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
-    
-    try {
-      // Use applyConstraints to dynamically switch the camera on the existing track.
-      // This is far more reliable than stopping and starting new streams.
-      await videoTrack.applyConstraints({
-        facingMode: { exact: newFacingMode }
-      });
-      
-      // If successful, update our state to reflect the change.
-      setFacingMode(newFacingMode);
-    } catch (error) {
-      console.error("Error switching camera with applyConstraints:", error);
-      toast({
-        title: "Camera Switch Failed",
-        description: "Your device may not support switching cameras while recording.",
-        variant: "destructive",
-      });
-    }
-  };
-  
   const handleStopSession = () => {
-    // Stop the recorder if it's running. This will trigger the 'onstop' event.
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-    
-    // Explicitly stop all media tracks to release the camera and mic.
-    // This is the crucial step to ensure the camera turns off.
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-
-    // Clean up state and close the component UI.
+    stopMediaTracks(stream);
     setStream(null);
-    setIsRecording(false);
     onClose();
+  };
+  
+  const handleSwitchCamera = async () => {
+    const newFacingMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newFacingMode);
+
+    if (stream) {
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) return;
+      
+      try {
+        await videoTrack.applyConstraints({
+          facingMode: { ideal: newFacingMode },
+        });
+      } catch (err) {
+        console.error("Error switching camera with applyConstraints, falling back.", err);
+        stopMediaTracks(stream);
+        await startSession(newFacingMode);
+      }
+    }
   };
 
   const handleToggleCamera = () => {
@@ -264,7 +215,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
               className="flex flex-col lg:flex-row gap-3 lg:gap-4"
             >
               <Button
-                onClick={startRecording}
+                onClick={() => startSession(facingMode)}
                 className="w-full lg:flex-1 bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50 rounded-full py-3 lg:py-4 font-inter tracking-tight transition-all duration-200 hover:scale-105 hover:shadow-lg relative overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -314,7 +265,7 @@ export const VideoRecordingFlow: React.FC<VideoRecordingFlowProps> = ({
             facingMode={facingMode}
             onToggleCamera={handleToggleCamera}
             onToggleMic={handleToggleMic}
-            onSwitchCamera={switchCamera}
+            onSwitchCamera={handleSwitchCamera}
             onToggleAiMuted={() => setIsAiMuted(prev => !prev)}
           />
 
