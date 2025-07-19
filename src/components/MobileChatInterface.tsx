@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { ChatMessageList } from "./ChatMessageList";
-import { ChatInput } from "./ChatInput";
 import { ShoppingList } from "./ShoppingList";
 import { LeftoversDialog } from "./LeftoversDialog";
 import { useChat } from "@/hooks/useChat";
@@ -12,7 +11,7 @@ import { ThoughtStep, LeftoverItem, UserPreferences } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
 import { AmazonProductView } from "./AmazonProductView";
 import { Button } from "./ui/button";
-import { ShoppingCart, Package, Utensils, LogOut, Menu, Plus, Send, ChevronDown } from "lucide-react";
+import { ShoppingCart, Package, Utensils, LogOut, Menu, Plus, Send, ChevronDown, MessageSquare, RotateCcw } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -27,6 +26,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { Textarea } from "./ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 interface MobileChatInterfaceProps {
   isShoppingListOpen: boolean;
@@ -39,6 +49,94 @@ interface MobileChatInterfaceProps {
   pendingMessage?: string | null;
   onMessageSent?: () => void;
 }
+
+interface MobileChatInputProps {
+  inputValue: string;
+  setInputValue: (value: string) => void;
+  handleSendMessage: (e: React.FormEvent) => void;
+  isThinking: boolean;
+  onReset: () => void;
+  onFeedback: () => void;
+}
+
+const MobileChatInput = ({ inputValue, setInputValue, handleSendMessage, isThinking, onReset, onFeedback }: MobileChatInputProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [inputValue]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e as any);
+    }
+  };
+
+  return (
+    <div className="p-4 bg-background/95 backdrop-blur-sm border-t border-border/20">
+      <form onSubmit={handleSendMessage} className="relative">
+        <div className="flex items-end bg-muted/60 backdrop-blur-sm rounded-3xl border border-border/20 p-2 gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                type="button" 
+                size="icon" 
+                variant="ghost"
+                className="flex-shrink-0 h-10 w-10 rounded-full hover:bg-muted/80 transition-colors"
+                disabled={isThinking}
+              >
+                <Plus className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="start" 
+              className="w-40 bg-background/95 backdrop-blur-sm border border-border/20 rounded-xl shadow-lg"
+            >
+              <DropdownMenuItem 
+                onClick={onFeedback}
+                className="flex items-center gap-2 hover:bg-muted/50 rounded-lg m-1 cursor-pointer transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Feedback</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={onReset}
+                className="flex items-center gap-2 hover:bg-muted/50 rounded-lg m-1 cursor-pointer transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Reset</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Textarea
+            ref={textareaRef}
+            value={inputValue} 
+            onChange={(e) => setInputValue(e.target.value)} 
+            placeholder="Message"
+            disabled={isThinking}
+            onKeyDown={handleKeyDown}
+            className="flex-1 resize-none bg-transparent border-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 max-h-32 min-h-[20px] leading-relaxed px-2 py-3 text-sm placeholder:text-muted-foreground/60"
+            rows={1}
+          />
+          
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={isThinking || !inputValue.trim()}
+            className="flex-shrink-0 h-10 w-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 disabled:opacity-50"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 export const MobileChatInterface = ({
   isShoppingListOpen,
@@ -53,6 +151,7 @@ export const MobileChatInterface = ({
 }: MobileChatInterfaceProps) => {
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -193,128 +292,119 @@ export const MobileChatInterface = ({
     handleSendMessage(e);
   };
 
+  const handleResetRequest = () => {
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = () => {
+    resetConversation();
+    setShowResetConfirm(false);
+  };
+
+  const handleFeedback = () => {
+    // Add feedback functionality here
+    console.log('Feedback requested');
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Mobile Header with Dropdown */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass-nav border-b border-glass-border/30">
-        <div className="flex justify-between items-center p-4">
-          {/* Logo/Brand */}
-          <div className="text-lg font-semibold text-foreground">
-            Mise
-          </div>
-
-          {/* Menu Button */}
+      {/* Mobile Header - Centered */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/20">
+        <div className="flex justify-between items-center px-4 py-3">
+          {/* Empty left side for spacing */}
+          <div className="w-9"></div>
+          
+          {/* Center - Mise title with dropdown */}
           <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
-                size="sm"
-                className="glass-pill p-2"
+                className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded-lg transition-colors"
               >
-                <Menu className="w-5 h-5" />
+                <span className="text-xl font-medium text-foreground">Mise</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground transition-transform duration-200" style={{
+                  transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)'
+                }} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent 
-              align="end" 
-              className="w-48 glass-card border border-glass-border/50"
+              align="center" 
+              className="w-52 mt-2 bg-background/95 backdrop-blur-sm border border-border/20 rounded-xl shadow-lg"
             >
               <DropdownMenuItem 
                 onClick={() => {
                   setIsShoppingListOpen(true);
                   setIsDropdownOpen(false);
                 }}
-                className="flex items-center gap-3 p-3"
+                className="flex items-center gap-3 p-4 hover:bg-muted/50 rounded-lg m-1 cursor-pointer transition-colors"
               >
-                <ShoppingCart className="w-4 h-4" />
-                Shopping
+                <ShoppingCart className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Shopping</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => {
                   navigate('/inventory');
                   setIsDropdownOpen(false);
                 }}
-                className="flex items-center gap-3 p-3"
+                className="flex items-center gap-3 p-4 hover:bg-muted/50 rounded-lg m-1 cursor-pointer transition-colors"
               >
-                <Package className="w-4 h-4" />
-                Inventory
+                <Package className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Inventory</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => {
                   setIsLeftoversOpen(true);
                   setIsDropdownOpen(false);
                 }}
-                className="flex items-center gap-3 p-3"
+                className="flex items-center gap-3 p-4 hover:bg-muted/50 rounded-lg m-1 cursor-pointer transition-colors"
               >
-                <Utensils className="w-4 h-4" />
-                Leftovers
+                <Utensils className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Leftovers</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => {
-                  handleLogout();
-                  setIsDropdownOpen(false);
-                }}
-                className="flex items-center gap-3 p-3 text-red-500 hover:text-red-600"
+                onClick={handleLogout}
+                className="flex items-center gap-3 p-4 hover:bg-red-50/50 rounded-lg m-1 cursor-pointer transition-colors"
               >
-                <LogOut className="w-4 h-4" />
-                Logout
+                <LogOut className="w-5 h-5 text-red-500" />
+                <span className="text-sm font-medium text-red-500">Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Right - Menu button */}
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="h-9 w-9 hover:bg-muted/50 rounded-lg transition-colors"
+          >
+            <Menu className="w-5 h-5 text-muted-foreground" />
+          </Button>
         </div>
       </header>
 
-      {/* Chat Content */}
-      <div className="flex-1 flex flex-col pt-20 pb-20">
-        <div className="flex-1 overflow-hidden">
-          <ChatMessageList 
-            messages={messages} 
-            isThinking={isThinking}
-          />
-          <div ref={messagesEndRef} />
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto pt-16 pb-4">
+        <div className="px-4">
+          <ChatMessageList messages={messages} isThinking={isThinking} setThoughtSteps={setThoughtSteps} />
         </div>
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Mobile Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 glass-nav border-t border-glass-border/30 p-4">
-        <form onSubmit={handleSendMessageWithForm} className="flex items-center gap-3">
-          {/* Plus Button */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="glass-pill p-3 flex-shrink-0"
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
-
-          {/* Message Input */}
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask anything"
-              className="w-full px-4 py-3 rounded-2xl glass-card border border-glass-border/50 bg-glass-bg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              disabled={isThinking}
-            />
-          </div>
-
-          {/* Send Button */}
-          <Button
-            type="submit"
-            disabled={!inputValue.trim() || isThinking}
-            variant="ghost"
-            size="sm"
-            className="glass-pill p-3 flex-shrink-0"
-          >
-            <Send className="w-5 h-5" />
-          </Button>
-        </form>
+      {/* Mobile Chat Input - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-10">
+        <MobileChatInput
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          handleSendMessage={handleSendMessageWithForm}
+          isThinking={isThinking}
+          onReset={handleResetRequest}
+          onFeedback={handleFeedback}
+        />
       </div>
-
-      {/* Dialogs */}
+      
+      {/* Shopping List Dialog */}
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Shopping List</DialogTitle>
           </DialogHeader>
@@ -329,7 +419,7 @@ export const MobileChatInterface = ({
       </Dialog>
 
       <Dialog open={isLeftoversOpen} onOpenChange={setIsLeftoversOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle>Leftovers</DialogTitle>
           </DialogHeader>
@@ -342,6 +432,24 @@ export const MobileChatInterface = ({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Conversation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the conversation? This will clear all messages and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmReset}>
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AmazonProductView
         isOpen={isAmazonProductViewOpen}
