@@ -11,10 +11,11 @@ import { ThoughtStep, LeftoverItem, UserPreferences } from "@/data/schema";
 import { Session } from "@supabase/supabase-js";
 import { AmazonProductView } from "./AmazonProductView";
 import { Button } from "./ui/button";
-import { ShoppingCart, Package, Utensils, LogOut, Menu, Plus, Send, ChevronDown, MessageSquare, RotateCcw } from "lucide-react";
+import { ShoppingCart, Package, Utensils, LogOut, Menu, Plus, Send, ChevronDown, MessageSquare, RotateCcw, ChevronRight } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import FeedbackWidget from "./FeedbackWidget"; // Correct import for FeedbackWidget
+import { ThoughtProcess } from "./ThoughtProcess"; // Import ThoughtProcess
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,8 @@ interface MobileChatInterfaceProps {
   thoughtSteps: ThoughtStep[];
   pendingMessage?: string | null;
   onMessageSent?: () => void;
+  isRightPanelOpen: boolean; // Add this prop
+  toggleSidebar: () => void; // Add this prop
 }
 
 interface MobileChatInputProps {
@@ -155,6 +158,8 @@ export const MobileChatInterface = ({
   thoughtSteps,
   pendingMessage,
   onMessageSent,
+  isRightPanelOpen, // Destructure isRightPanelOpen
+  toggleSidebar,    // Destructure toggleSidebar
 }: MobileChatInterfaceProps) => {
   const [isAmazonProductViewOpen, setIsAmazonProductViewOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -383,6 +388,9 @@ export const MobileChatInterface = ({
             variant="ghost" 
             size="icon"
             className="h-9 w-9 hover:bg-muted/50 rounded-lg transition-colors"
+            onClick={toggleSidebar} // Add onClick handler to open sidebar
+            aria-label="Open thought process sidebar"
+            aria-expanded={isRightPanelOpen ? "true" : "false"}
           >
             <Menu className="w-5 h-5 text-muted-foreground" />
           </Button>
@@ -390,7 +398,7 @@ export const MobileChatInterface = ({
       </header>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto pt-16 pb-4">
+      <div className="flex-1 overflow-y-auto pt-16 pb-32"> {/* Increased padding-bottom */}
         <div className="px-4">
           <ChatMessageList messages={messages} isThinking={isThinking} setThoughtSteps={setThoughtSteps} />
         </div>
@@ -409,6 +417,48 @@ export const MobileChatInterface = ({
         />
       </div>
       
+      {/* Mobile Sidebar Overlay */}
+      <div 
+        id="mobile-thought-process-sidebar"
+        role="complementary"
+        aria-label="Thought process sidebar"
+        className={`lg:hidden fixed inset-y-0 right-0 z-sidebar mobile-sidebar-width bg-background border-l border-border shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${
+          isRightPanelOpen ? 'translate-x-0' : 'translate-x-full'
+        }`} 
+        style={{ top: '80px' }}
+      >
+        {/* Mobile Sidebar Header */}
+        <div className="flex-shrink-0 p-4 border-b border-border/50">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">AI Thought Process</h2>
+            <Button
+              onClick={toggleSidebar}
+              aria-label="Close sidebar"
+              className="p-2 rounded-full hover:bg-muted transition-colors duration-200 focus-ring"
+              variant="ghost"
+              size="icon"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        
+        {/* Mobile Sidebar Content */}
+        <div className="flex-1 min-h-0 p-4 sidebar-scroll">
+          <ThoughtProcess steps={thoughtSteps} />
+        </div>
+      </div>
+
+      {/* Mobile Backdrop */}
+      {isRightPanelOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/30 z-backdrop transition-opacity duration-300 animate-fade-in"
+          style={{ top: '80px' }}
+          onClick={toggleSidebar}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Shopping List Dialog */}
       <Dialog open={isShoppingListOpen} onOpenChange={setIsShoppingListOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl">
