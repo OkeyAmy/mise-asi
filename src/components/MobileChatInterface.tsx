@@ -16,7 +16,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import FeedbackWidget from "./FeedbackWidget"; // Correct import for FeedbackWidget
 import { ThoughtProcess } from "./ThoughtProcess"; // Import ThoughtProcess
-import { Message } from '@/data/schema';
 import {
   Dialog,
   DialogContent,
@@ -401,7 +400,7 @@ export const MobileChatInterface = ({
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto pt-16 pb-32"> {/* Increased padding-bottom */}
         <div className="px-4">
-          <ChatMessageList messages={messages} isThinking={isThinking} />
+          <ChatMessageList messages={messages} isThinking={isThinking} setThoughtSteps={setThoughtSteps} />
         </div>
         <div ref={messagesEndRef} />
       </div>

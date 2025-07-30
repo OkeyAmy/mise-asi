@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AppWrapper from "./components/AppWrapper";
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import InventoryPage from "./pages/InventoryPage";
 import { AuthPage } from "./pages/Auth";
@@ -22,10 +22,7 @@ const App: React.FC = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AppWrapper />} />
-            <Route path="/chat" element={<AppWrapper />} />
-            <Route path="/video" element={<AppWrapper />} />
-            <Route path="/audio" element={<AppWrapper />} />
+            <Route path="/" element={<Index />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
