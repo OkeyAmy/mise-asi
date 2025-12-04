@@ -18,7 +18,7 @@ def create_app() -> Flask:
     """Create and configure Flask app"""
     app = Flask(__name__)
     
-    # Enable CORS for frontend - allow all common dev ports
+    # Enable CORS for frontend - allow all common dev ports and production
     CORS(app, origins=[
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Common React port
@@ -26,6 +26,7 @@ def create_app() -> Flask:
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8080",
+        "https://mise-ai.vercel.app",  # Production frontend
     ], supports_credentials=True)
     
     @app.route("/health", methods=["GET"])
