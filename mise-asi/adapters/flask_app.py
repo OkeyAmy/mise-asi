@@ -27,7 +27,7 @@ def create_app() -> Flask:
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8080",
         "https://mise-ai.vercel.app",
-        "https://mise-ai-mauve.vercel.app/" 
+        r"https://mise-ai.*\.vercel\.app",  # Allow all Vercel preview deployments
     ], supports_credentials=True)
     
     @app.route("/health", methods=["GET"])
