@@ -36,3 +36,18 @@ UI_UX_Growth_Suggestions.md
 scripts/*
 scripts
 scripts/
+
+# Python
+__pycache__/
+*.pyc
+.venv
+venv
+env
+.env
+
+# Requested Files
+AGENT_ECOSYSTEM_DOCS.md
+AI_AGENT_ECOSYSTEM.md
+asi-samples
+GOOGLE_AUTH_SETUP.md
+mise-asi/.env

@@ -3,9 +3,19 @@ import { toast } from "sonner";
 import { Content, Part } from "@google/generative-ai";
 import { ThoughtStep, Message } from "@/data/schema";
 import { UseChatProps } from "./chat/types";
-import { handleFunctionCall } from "./chat/functionHandlers";
 import { useChatHistory } from "./useChatHistory";
 import { callGeminiProxy } from "./chat/geminiProxy";
+
+/*
+============================================================================
+NOTE: This file has been updated to use the ASI orchestrator (mise-asi/).
+The ASI handles all function calls server-side, so we no longer need to
+execute them locally. Old code is commented below for reference.
+============================================================================
+*/
+
+// OLD: import { handleFunctionCall } from "./chat/functionHandlers";
+// The ASI now handles function calls server-side
 
 const initialMessages: Message[] = [
   {
@@ -21,7 +31,7 @@ export const useChat = (props: UseChatProps) => {
     session,
     ...functionHandlerArgs
   } = props;
-  
+
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -78,10 +88,10 @@ export const useChat = (props: UseChatProps) => {
     setInputValue("");
     setIsThinking(false);
     setThoughtSteps([]);
-    
+
     // Clear from database
     await clearChatSession();
-    
+
     // Clear from localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem("chat_history", JSON.stringify(initialMessages));
@@ -106,7 +116,7 @@ export const useChat = (props: UseChatProps) => {
     e.preventDefault();
     if (!inputValue.trim() || isThinking) return;
 
-    setThoughtSteps(prev => 
+    setThoughtSteps(prev =>
       prev.map(s => ({ ...s, status: s.status === 'active' ? 'completed' : s.status }))
     );
 
@@ -121,11 +131,11 @@ export const useChat = (props: UseChatProps) => {
     setMessages(newMessages);
     setInputValue("");
     setIsThinking(true);
-    addThoughtStep("🤔 Thinking...");
+    addThoughtStep("🚀 Sending to ASI...", "Connecting to mise-asi orchestrator", "active");
 
-    // Build conversation history including ALL previous function calls and results
+    // Build conversation history for ASI
     const history: Content[] = [];
-    
+
     for (const msg of newMessages) {
       if (msg.sender === "user") {
         history.push({
@@ -133,51 +143,76 @@ export const useChat = (props: UseChatProps) => {
           parts: [{ text: msg.text }],
         });
       } else {
-        // Bot message
-        const parts: Part[] = [];
-        
-        // Add the text response
+        // Bot message - just include the text
         if (msg.text) {
-          parts.push({ text: msg.text });
-        }
-        
-        // Add any function calls that were made
-        if (msg.functionCalls) {
-          console.log(`📋 Adding previous function calls to AI memory:`, msg.functionCalls.map(fc => fc.name));
-          for (const fc of msg.functionCalls) {
-            parts.push({
-              functionCall: {
-                name: fc.name,
-                args: fc.arguments,
-              },
-            });
-          }
-        }
-        
-        if (parts.length > 0) {
           history.push({
             role: "model",
-            parts,
-          });
-        }
-        
-        // Add function results as user messages (this is how Gemini expects them)
-        if (msg.functionResults) {
-          console.log(`📊 Adding previous function results to AI memory:`, msg.functionResults.map(fr => `${fr.functionName}: ${JSON.stringify(fr.result).substring(0, 100)}...`));
-          const functionResponseParts: Part[] = msg.functionResults.map(result => ({
-            functionResponse: {
-              name: result.functionName,
-              response: { success: true, message: result.result },
-            },
-          }));
-          
-          history.push({
-            role: "user",
-            parts: functionResponseParts,
+            parts: [{ text: msg.text }],
           });
         }
       }
     }
+
+    try {
+      // Get user ID from session
+      const userId = session?.user?.id || "anonymous";
+
+      // Call ASI orchestrator - it handles ALL function calls server-side
+      const response = await callGeminiProxy(history, userId);
+
+      // Add thought steps from ASI response
+      if (response.thoughtSteps) {
+        for (const step of response.thoughtSteps) {
+          addThoughtStep(step);
+        }
+      }
+
+      // Log function calls made by ASI (for debugging)
+      if (response.functionCallsMade && response.functionCallsMade.length > 0) {
+        console.log("📋 ASI executed functions:", response.functionCallsMade.map((fc: any) => fc.name));
+        addThoughtStep(`🔧 Functions executed: ${response.functionCallsMade.map((fc: any) => fc.name).join(', ')}`);
+      }
+
+      // Get the response text
+      const text = response.candidates?.[0]?.content?.parts[0]?.text ?? "Sorry, I'm not sure how to respond.";
+      const botMessage: Message = { id: Date.now() + 1, text, sender: "bot" };
+      setMessages(prev => [...prev, botMessage]);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast.error(errorMessage);
+      addThoughtStep(`❌ Error: ${errorMessage}`);
+    } finally {
+      setIsThinking(false);
+      setThoughtSteps((prev) =>
+        prev.map((s) => ({ ...s, status: s.status === "active" ? "completed" : s.status }))
+      );
+      addThoughtStep("✨ Done!");
+    }
+  };
+
+  return {
+    messages,
+    inputValue,
+    setInputValue,
+    isThinking,
+    handleSendMessage,
+    resetConversation,
+  };
+};
+
+/*
+============================================================================
+OLD IMPLEMENTATION - COMMENTED OUT FOR REFERENCE
+This code executed function calls locally via handleFunctionCall.
+Now the ASI orchestrator (mise-asi/) handles all function calls server-side.
+============================================================================
+
+const handleSendMessage_OLD = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputValue.trim() || isThinking) return;
+
+    // ... message setup code ...
 
     try {
       const response = await callGeminiProxy(history);
@@ -245,9 +280,6 @@ export const useChat = (props: UseChatProps) => {
           functionResults: functionResultsWithIds,
         };
         
-        console.log(`💾 Storing function calls in message for future memory:`, functionCallsWithIds.map(fc => fc.name));
-        console.log(`💾 Storing function results in message for future memory:`, functionResultsWithIds.map(fr => `${fr.functionName}: success`));
-        
         setMessages(prev => [...prev, botMessage]);
 
       } else {
@@ -267,13 +299,4 @@ export const useChat = (props: UseChatProps) => {
         addThoughtStep("✨ Done!");
     }
   };
-
-  return {
-    messages,
-    inputValue,
-    setInputValue,
-    isThinking,
-    handleSendMessage,
-    resetConversation,
-  };
-};
+*/
